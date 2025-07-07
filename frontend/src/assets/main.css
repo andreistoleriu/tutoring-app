@@ -1,0 +1,38 @@
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f9fafb;
+  color: #111827;
+}
+
+/* Custom components */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+.btn-primary {
+  @apply btn bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500;
+}
+
+.btn-secondary {
+  @apply btn bg-white text-gray-700 border-gray-300 hover:bg-gray-50 focus:ring-blue-500;
+}
+
+.card {
+  @apply bg-white rounded-lg shadow border border-gray-100 p-6;
+}
+
+.input {
+  @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500;
+}
+
+/* Romanian theme colors */
+.romania-blue { color: #002b7f; }
+.romania-yellow { color: #fcd116; }
+.romania-red { color: #ce1126; }
