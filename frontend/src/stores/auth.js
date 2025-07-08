@@ -1,19 +1,12 @@
-// stores/auth.js
+// frontend/src/stores/auth.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import api from '@/services/api'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
-  const user = ref({
-    id: 1,
-    first_name: 'Maria',
-    last_name: 'Popescu',
-    email: 'maria.popescu@email.com',
-    user_type: 'tutor', // 'tutor' or 'student'
-    phone: '+40 123 456 789'
-  })
-
-  const token = ref('mock-jwt-token-12345')
+  const user = ref(null)
+  const token = ref(null)
   const loading = ref(false)
   const error = ref(null)
 
@@ -32,37 +25,47 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      // Mock login - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Mock response
-      token.value = 'mock-jwt-token-' + Date.now()
-      user.value = {
-        id: 1,
-        first_name: credentials.email.includes('tutor') ? 'Maria' : 'Ana',
-        last_name: credentials.email.includes('tutor') ? 'Popescu' : 'Student',
+      const response = await api.post('/auth/login', {
         email: credentials.email,
-        user_type: credentials.email.includes('tutor') ? 'tutor' : 'student',
-        phone: '+40 123 456 789'
-      }
+        password: credentials.password
+      })
+
+      token.value = response.data.token
+      user.value = response.data.user
+
+      // Save to localStorage
+      localStorage.setItem('auth_token', token.value)
+      localStorage.setItem('auth_user', JSON.stringify(user.value))
 
       return { success: true }
     } catch (err) {
-      error.value = err.message || 'Login failed'
+      error.value = err.response?.data?.message || 'Login failed'
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  const logout = () => {
-    user.value = null
-    token.value = null
+  const register = async (userData) => {
+    loading.value = true
     error.value = null
 
-    // Redirect to home page
-    if (typeof window !== 'undefined') {
-      window.location.href = '/'
+    try {
+      const response = await api.post('/auth/register', userData)
+
+      token.value = response.data.token
+      user.value = response.data.user
+
+      // Save to localStorage
+      localStorage.setItem('auth_token', token.value)
+      localStorage.setItem('auth_user', JSON.stringify(user.value))
+
+      return { success: true }
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Registration failed'
+      throw err
+    } finally {
+      loading.value = false
     }
   }
 
@@ -75,55 +78,42 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      // Mock API call - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 500))
+      const response = await api.get('/auth/me')
+      user.value = response.data.user
 
-      // Mock user data - in real app this would come from API
-      if (!user.value) {
-        user.value = {
-          id: 1,
-          first_name: 'Maria',
-          last_name: 'Popescu',
-          email: 'maria.popescu@email.com',
-          user_type: 'tutor',
-          phone: '+40 123 456 789'
-        }
-      }
+      // Update localStorage
+      localStorage.setItem('auth_user', JSON.stringify(user.value))
 
       return user.value
     } catch (err) {
-      error.value = err.message || 'Failed to fetch user'
+      error.value = err.response?.data?.message || 'Failed to fetch user'
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  const register = async (userData) => {
-    loading.value = true
-    error.value = null
-
+  const logout = async () => {
     try {
-      // Mock registration - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Auto-login after registration
-      token.value = 'mock-jwt-token-' + Date.now()
-      user.value = {
-        id: Date.now(),
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        email: userData.email,
-        user_type: userData.user_type,
-        phone: userData.phone || ''
+      if (token.value) {
+        await api.post('/auth/logout')
       }
-
-      return { success: true }
     } catch (err) {
-      error.value = err.message || 'Registration failed'
-      throw err
+      console.error('Logout error:', err)
     } finally {
-      loading.value = false
+      // Clear local state regardless
+      user.value = null
+      token.value = null
+      error.value = null
+
+      // Clear localStorage
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_user')
+
+      // Redirect to home page
+      if (typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
     }
   }
 
@@ -132,17 +122,17 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
 
     try {
-      // Mock profile update - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await api.put('/student/profile', profileData)
 
       // Update user data
       if (user.value) {
-        user.value = { ...user.value, ...profileData }
+        user.value = { ...user.value, ...response.data.user }
+        localStorage.setItem('auth_user', JSON.stringify(user.value))
       }
 
       return { success: true }
     } catch (err) {
-      error.value = err.message || 'Profile update failed'
+      error.value = err.response?.data?.message || 'Profile update failed'
       throw err
     } finally {
       loading.value = false
@@ -153,8 +143,8 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
   }
 
-  // Initialize auth state from localStorage if available
-  const initializeAuth = () => {
+  // Initialize auth state from localStorage
+  const initAuth = async () => {
     if (typeof window !== 'undefined') {
       const savedToken = localStorage.getItem('auth_token')
       const savedUser = localStorage.getItem('auth_user')
@@ -163,24 +153,16 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = savedToken
         try {
           user.value = JSON.parse(savedUser)
+          // Verify token is still valid
+          await fetchUser()
         } catch (e) {
-          // Invalid user data, clear everything
+          console.error('Token invalid:', e)
+          // Clear invalid data
           localStorage.removeItem('auth_token')
           localStorage.removeItem('auth_user')
+          token.value = null
+          user.value = null
         }
-      }
-    }
-  }
-
-  // Save auth state to localStorage
-  const saveAuthState = () => {
-    if (typeof window !== 'undefined') {
-      if (token.value && user.value) {
-        localStorage.setItem('auth_token', token.value)
-        localStorage.setItem('auth_user', JSON.stringify(user.value))
-      } else {
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('auth_user')
       }
     }
   }
@@ -200,12 +182,11 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Actions
     login,
-    logout,
-    fetchUser,
     register,
+    fetchUser,
+    logout,
     updateProfile,
     clearError,
-    initializeAuth,
-    saveAuthState
+    initAuth
   }
 })

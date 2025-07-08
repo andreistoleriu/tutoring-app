@@ -1,3 +1,4 @@
+// frontend/src/services/api.js
 import axios from 'axios'
 
 const api = axios.create({
@@ -16,5 +17,19 @@ api.interceptors.request.use(config => {
   }
   return config
 })
+
+// Handle response errors
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('auth_user')
+      window.location.href = '/'
+    }
+    return Promise.reject(error)
+  }
+)
 
 export default api
