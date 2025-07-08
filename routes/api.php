@@ -9,6 +9,17 @@ use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\DashboardController;
 
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned the "api" middleware group. Enjoy building your API!
+|
+*/
+
 // Public routes
 Route::prefix('v1')->group(function () {
 
@@ -43,15 +54,15 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::get('locations', function () {
-    $locations = \App\Models\Location::active()
-        ->select('id', 'city', 'county', 'slug')
-        ->orderBy('county')
-        ->orderBy('city')
-        ->get();
+        $locations = \App\Models\Location::active()
+            ->select('id', 'city', 'county', 'slug')
+            ->orderBy('county')
+            ->orderBy('city')
+            ->get();
 
-    return response()->json([
-        'locations' => $locations->groupBy('county'),
-        'all_locations' => $locations, // Also provide flat list for easier filtering
+        return response()->json([
+            'locations' => $locations->groupBy('county'),
+            'all_locations' => $locations, // Also provide flat list for easier filtering
         ]);
     });
 
@@ -67,6 +78,8 @@ Route::prefix('v1')->group(function () {
         // Tutor-specific routes (check user type in controller)
         Route::prefix('tutor')->group(function () {
             Route::get('dashboard', [TutorController::class, 'dashboard']);
+            Route::put('profile', [TutorController::class, 'updateProfile']);
+            Route::put('availability', [TutorController::class, 'updateAvailability']);
         });
 
         // Student-specific routes (check user type in controller)

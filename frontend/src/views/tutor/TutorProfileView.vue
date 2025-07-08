@@ -258,12 +258,16 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useTutorStore } from '@/stores/tutor'
+import api from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const tutorStore = useTutorStore()
 
 // Reactive data
 const saving = ref(false)
+const loading = ref(false)
 const profile = ref({
   firstName: '',
   lastName: '',
@@ -280,31 +284,9 @@ const profile = ref({
   photo: null
 })
 
-const availableSubjects = ref([
-  { id: 1, name: 'Matematică' },
-  { id: 2, name: 'Fizică' },
-  { id: 3, name: 'Chimie' },
-  { id: 4, name: 'Biologie' },
-  { id: 5, name: 'Română' },
-  { id: 6, name: 'Engleză' },
-  { id: 7, name: 'Franceză' },
-  { id: 8, name: 'Germană' },
-  { id: 9, name: 'Istorie' },
-  { id: 10, name: 'Geografie' },
-  { id: 11, name: 'Informatică' },
-  { id: 12, name: 'Economie' }
-])
-
-const availableLocations = ref([
-  { id: 1, city: 'București', county: 'București' },
-  { id: 2, city: 'Cluj-Napoca', county: 'Cluj' },
-  { id: 3, city: 'Timișoara', county: 'Timiș' },
-  { id: 4, city: 'Iași', county: 'Iași' },
-  { id: 5, city: 'Constanța', county: 'Constanța' },
-  { id: 6, city: 'Craiova', county: 'Dolj' },
-  { id: 7, city: 'Brașov', county: 'Brașov' },
-  { id: 8, city: 'Galați', county: 'Galați' }
-])
+// Load from API instead of hardcoded
+const availableSubjects = ref([])
+const availableLocations = ref([])
 
 // Methods
 const getInitials = () => {
@@ -325,6 +307,81 @@ const handlePhotoUpload = (event) => {
   }
 }
 
+// Load real data from API
+const loadSubjects = async () => {
+  try {
+    console.log('🔄 Loading subjects from API...')
+    const response = await api.get('/subjects')
+    availableSubjects.value = response.data.subjects
+    console.log('✅ Subjects loaded:', availableSubjects.value.length)
+  } catch (error) {
+    console.error('❌ Error loading subjects:', error)
+    alert('Eroare la încărcarea materiilor.')
+  }
+}
+
+const loadLocations = async () => {
+  try {
+    console.log('🔄 Loading locations from API...')
+    const response = await api.get('/locations')
+    // Convert the grouped format to flat array for form
+    availableLocations.value = response.data.all_locations || []
+    console.log('✅ Locations loaded:', availableLocations.value.length)
+  } catch (error) {
+    console.error('❌ Error loading locations:', error)
+    alert('Eroare la încărcarea locațiilor.')
+  }
+}
+
+const loadProfile = async () => {
+  loading.value = true
+  try {
+    console.log('🔄 Loading tutor profile from API...')
+
+    // Get current user data
+    const user = authStore.user
+    if (user) {
+      profile.value.firstName = user.first_name || ''
+      profile.value.lastName = user.last_name || ''
+      profile.value.email = user.email || ''
+      profile.value.phone = user.phone || ''
+    }
+
+    // Get tutor-specific data from dashboard (which already loads tutor info)
+    if (tutorStore.dashboard?.tutor) {
+      const tutorData = tutorStore.dashboard.tutor
+      profile.value.bio = tutorData.bio || ''
+      profile.value.experience = tutorData.experience || ''
+      profile.value.education = tutorData.education || ''
+      profile.value.hourlyRate = tutorData.hourly_rate || 50
+      profile.value.offersOnline = tutorData.offers_online !== false
+      profile.value.offersInPerson = tutorData.offers_in_person !== false
+
+      // Get selected subjects (assuming subjects is array of subject objects)
+      if (tutorData.subjects && Array.isArray(tutorData.subjects)) {
+        // If subjects come as names, we'll need to match them to IDs
+        profile.value.selectedSubjects = tutorData.subjects.map(subjectName => {
+          const subject = availableSubjects.value.find(s => s.name === subjectName)
+          return subject ? subject.id : null
+        }).filter(id => id !== null)
+      }
+
+      // Get location (assuming location comes as city name)
+      if (tutorData.location) {
+        const location = availableLocations.value.find(l => l.city === tutorData.location)
+        profile.value.locationId = location ? location.id : ''
+      }
+    }
+
+    console.log('✅ Profile loaded successfully')
+  } catch (error) {
+    console.error('❌ Error loading profile:', error)
+    alert('Eroare la încărcarea profilului.')
+  } finally {
+    loading.value = false
+  }
+}
+
 const saveProfile = async () => {
   if (profile.value.selectedSubjects.length === 0) {
     alert('Te rugăm să selectezi cel puțin o materie.')
@@ -339,44 +396,67 @@ const saveProfile = async () => {
   saving.value = true
 
   try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    console.log('🔄 Saving profile...')
 
-    // Here you would normally call your API
-    // await tutorStore.updateProfile(profile.value)
+    // Prepare data for API
+    const profileData = {
+      first_name: profile.value.firstName,
+      last_name: profile.value.lastName,
+      email: profile.value.email,
+      phone: profile.value.phone,
+      bio: profile.value.bio,
+      experience: profile.value.experience,
+      education: profile.value.education,
+      hourly_rate: profile.value.hourlyRate,
+      location_id: profile.value.locationId,
+      subjects: profile.value.selectedSubjects, // Array of subject IDs
+      offers_online: profile.value.offersOnline,
+      offers_in_person: profile.value.offersInPerson,
+    }
 
+    // Include photo if uploaded
+    if (profile.value.photo) {
+      const formData = new FormData()
+      Object.keys(profileData).forEach(key => {
+        if (Array.isArray(profileData[key])) {
+          profileData[key].forEach(item => formData.append(`${key}[]`, item))
+        } else {
+          formData.append(key, profileData[key])
+        }
+      })
+      formData.append('photo', profile.value.photo)
+
+      // Use FormData for file upload
+      await tutorStore.updateProfile(formData)
+    } else {
+      // Regular JSON data
+      await tutorStore.updateProfile(profileData)
+    }
+
+    console.log('✅ Profile saved successfully')
     alert('Profilul a fost salvat cu succes!')
     router.push({ name: 'tutor-dashboard' })
   } catch (error) {
-    console.error('Error saving profile:', error)
+    console.error('❌ Error saving profile:', error)
     alert('A apărut o eroare la salvarea profilului.')
   } finally {
     saving.value = false
   }
 }
 
-const loadProfile = () => {
-  // Load existing profile data
-  // This would normally come from your API
-  profile.value = {
-    firstName: 'Maria',
-    lastName: 'Popescu',
-    email: 'maria.popescu@email.com',
-    phone: '+40 123 456 789',
-    bio: 'Profesor de matematică cu 10 ani de experiență. Pasionată de predarea conceptelor complexe într-un mod simplu și accesibil.',
-    experience: 'Licență în Matematică, Universitatea București. 10 ani experiență în predare.',
-    education: 'Universitatea București - Matematică, Master în Didactica Matematicii',
-    hourlyRate: 75,
-    locationId: 1,
-    selectedSubjects: [1, 2],
-    offersOnline: true,
-    offersInPerson: true,
-    photo: null
-  }
-}
-
 // Lifecycle
-onMounted(() => {
-  loadProfile()
+onMounted(async () => {
+  console.log('🔄 Initializing profile page...')
+
+  // Load required data first
+  await Promise.all([
+    loadSubjects(),
+    loadLocations()
+  ])
+
+  // Then load profile (needs subjects/locations to match data)
+  await loadProfile()
+
+  console.log('✅ Profile page initialized')
 })
 </script>

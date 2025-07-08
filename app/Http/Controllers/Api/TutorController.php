@@ -8,81 +8,80 @@ use App\Models\Subject;
 use App\Models\Location;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class TutorController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Tutor::query()
-            ->with(['user', 'location', 'subjects'])
-            ->whereHas('user', function ($q) {
-                $q->where('is_active', true);
-            });
-
-        // Search by name or bio
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%");
-            })->orWhere('bio', 'like', "%{$search}%");
-        }
+        $query = Tutor::with(['user', 'location', 'subjects'])
+            ->where('is_verified', true);
 
         // Filter by subject
         if ($request->filled('subject')) {
             $query->whereHas('subjects', function ($q) use ($request) {
-                $q->where('subjects.slug', $request->subject);
+                $q->where('slug', $request->subject);
             });
         }
 
         // Filter by location
         if ($request->filled('location')) {
             $query->whereHas('location', function ($q) use ($request) {
-                $q->where('county', 'like', '%' . $request->location . '%')
-                  ->orWhere('city', 'like', '%' . $request->location . '%');
+                $q->where('slug', $request->location);
             });
         }
 
         // Filter by lesson type
         if ($request->filled('lesson_type')) {
-            $lessonType = $request->lesson_type;
-            if ($lessonType === 'online') {
+            if ($request->lesson_type === 'online') {
                 $query->where('offers_online', true);
-            } elseif ($lessonType === 'in_person') {
+            } elseif ($request->lesson_type === 'in_person') {
                 $query->where('offers_in_person', true);
             }
         }
 
         // Filter by price range
-        if ($request->filled('min_price')) {
-            $query->where('hourly_rate', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $query->where('hourly_rate', '<=', $request->max_price);
+        if ($request->filled('price_range')) {
+            switch ($request->price_range) {
+                case 'under_50':
+                    $query->where('hourly_rate', '<', 50);
+                    break;
+                case '50_100':
+                    $query->whereBetween('hourly_rate', [50, 100]);
+                    break;
+                case 'over_100':
+                    $query->where('hourly_rate', '>', 100);
+                    break;
+            }
         }
 
-        // Sort options
-        $sortBy = $request->get('sort_by', 'created_at');
-        switch ($sortBy) {
-            case 'rating':
-                $query->orderBy('rating', 'desc');
-                break;
+        // Search by name or bio
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', function ($userQuery) use ($search) {
+                    $userQuery->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%");
+                })->orWhere('bio', 'like', "%{$search}%");
+            });
+        }
+
+        // Sort
+        switch ($request->get('sort_by')) {
             case 'price_low':
                 $query->orderBy('hourly_rate', 'asc');
                 break;
             case 'price_high':
                 $query->orderBy('hourly_rate', 'desc');
                 break;
-            case 'popular':
-                $query->orderBy('total_lessons', 'desc');
+            case 'rating':
+                $query->orderBy('rating', 'desc');
                 break;
-            case 'featured':
-                $query->orderBy('is_featured', 'desc')
-                      ->orderBy('rating', 'desc');
+            case 'newest':
+                $query->orderBy('created_at', 'desc');
                 break;
             default:
-                $query->orderBy('created_at', 'desc');
+                $query->orderBy('rating', 'desc');
         }
 
         $perPage = min($request->get('per_page', 12), 50);
@@ -131,14 +130,73 @@ class TutorController extends Controller
 
         $tutor = $user->tutor;
 
-        // Get upcoming bookings
+        if (!$tutor) {
+            return response()->json(['message' => 'Tutor profile not found'], 404);
+        }
+
+        // Debug: Log the tutor data
+        Log::info('Dashboard Debug - Tutor Data:', [
+            'tutor_id' => $tutor->id,
+            'total_earnings' => $tutor->total_earnings,
+            'total_lessons' => $tutor->total_lessons,
+            'rating' => $tutor->rating,
+            'total_reviews' => $tutor->total_reviews,
+        ]);
+
+        // Get pending bookings
+        $pendingBookings = $user->tutorBookings()
+            ->with(['student', 'subject'])
+            ->where('status', 'pending')
+            ->orderBy('scheduled_at')
+            ->get();
+
+        Log::info('Dashboard Debug - Pending Bookings Count:', ['count' => $pendingBookings->count()]);
+
+        $pendingBookingsData = $pendingBookings->map(function ($booking) {
+            return [
+                'id' => $booking->id,
+                'student' => [
+                    'full_name' => $booking->student->full_name,
+                    'email' => $booking->student->email,
+                ],
+                'subject' => [
+                    'name' => $booking->subject->name,
+                ],
+                'scheduled_at' => $booking->scheduled_at->toISOString(),
+                'lesson_type' => $booking->lesson_type,
+                'price' => (float) $booking->price,
+                'status' => $booking->status,
+                'payment_method' => $booking->payment_method,
+                'student_notes' => $booking->student_notes,
+            ];
+        });
+
+        // Get upcoming confirmed bookings
         $upcomingBookings = $user->tutorBookings()
             ->with(['student', 'subject'])
             ->where('scheduled_at', '>', now())
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->where('status', 'confirmed')
             ->orderBy('scheduled_at')
             ->limit(5)
             ->get();
+
+        $upcomingBookingsData = $upcomingBookings->map(function ($booking) {
+            return [
+                'id' => $booking->id,
+                'student' => [
+                    'full_name' => $booking->student->full_name,
+                    'email' => $booking->student->email,
+                ],
+                'subject' => [
+                    'name' => $booking->subject->name,
+                ],
+                'scheduled_at' => $booking->scheduled_at->toISOString(),
+                'lesson_type' => $booking->lesson_type,
+                'price' => (float) $booking->price,
+                'status' => $booking->status,
+                'payment_method' => $booking->payment_method,
+            ];
+        });
 
         // Get recent reviews
         $recentReviews = $user->receivedReviews()
@@ -147,28 +205,116 @@ class TutorController extends Controller
             ->limit(5)
             ->get();
 
-        // Calculate stats
+        $recentReviewsData = $recentReviews->map(function ($review) {
+            return [
+                'id' => $review->id,
+                'student' => [
+                    'full_name' => $review->student->full_name,
+                ],
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'created_at' => $review->created_at->toISOString(),
+                'date' => $review->created_at->format('Y-m-d'),
+            ];
+        });
+
+        // Calculate stats - Direct from tutor model
         $thisMonth = now()->startOfMonth();
         $stats = [
-            'total_earnings' => $tutor->total_earnings,
-            'total_lessons' => $tutor->total_lessons,
-            'average_rating' => $tutor->rating,
-            'total_reviews' => $tutor->total_reviews,
+            'total_earnings' => (float) $tutor->total_earnings,
+            'total_lessons' => (int) $tutor->total_lessons,
+            'average_rating' => (float) $tutor->rating,
+            'total_reviews' => (int) $tutor->total_reviews,
             'this_month_bookings' => $user->tutorBookings()
                 ->where('created_at', '>=', $thisMonth)
                 ->count(),
-            'pending_payments' => $user->tutorBookings()
+            'pending_payments' => (float) $user->tutorBookings()
                 ->where('payment_method', 'cash')
                 ->where('payment_status', 'pending')
                 ->where('status', 'completed')
                 ->sum('price'),
         ];
 
-        return response()->json([
+        Log::info('Dashboard Debug - Final Stats:', $stats);
+
+        // Get subscription
+        $subscription = $user->subscription;
+        $subscriptionData = null;
+
+        if ($subscription) {
+            $subscriptionData = [
+                'plan_type' => $subscription->plan_type,
+                'status' => $subscription->status,
+                'expires_at' => $subscription->expires_at ? $subscription->expires_at->format('Y-m-d') : null,
+                'trial_days_remaining' => $subscription->expires_at ?
+                    max(0, $subscription->expires_at->diffInDays(now())) : 0,
+                'features' => $this->getSubscriptionFeatures($subscription->plan_type),
+            ];
+        }
+
+        // Get pending cash payments
+        $pendingCashPayments = $user->tutorBookings()
+            ->with('student')
+            ->where('payment_method', 'cash')
+            ->where('payment_status', 'pending')
+            ->where('status', 'completed')
+            ->get();
+
+        $pendingCashPaymentsData = $pendingCashPayments->map(function ($booking) {
+            return [
+                'id' => $booking->id,
+                'studentName' => $booking->student->full_name,
+                'amount' => (float) $booking->price,
+                'date' => $booking->completed_at ? $booking->completed_at->format('Y-m-d') : $booking->scheduled_at->format('Y-m-d'),
+                'lessons' => 1,
+            ];
+        });
+
+        // Tutor profile data
+        $tutorData = [
+            'bio' => $tutor->bio,
+            'subjects' => $tutor->subjects->pluck('name')->toArray(),
+            'hourly_rate' => (float) $tutor->hourly_rate,
+            'availabilities' => $tutor->availabilities->isNotEmpty() ? ['Available'] : [],
+            'photo' => $tutor->profile_image,
+            'location' => $tutor->location ? $tutor->location->city : null,
+            'experience' => $tutor->experience,
+            'education' => $tutor->education,
+        ];
+
+        $response = [
             'stats' => $stats,
-            'upcoming_bookings' => $upcomingBookings,
-            'recent_reviews' => $recentReviews,
-            'subscription' => $user->subscription,
-        ]);
+            'subscription' => $subscriptionData,
+            'pending_bookings' => $pendingBookingsData,
+            'upcoming_bookings' => $upcomingBookingsData,
+            'recent_reviews' => $recentReviewsData,
+            'pending_cash_payments' => $pendingCashPaymentsData,
+            'tutor' => $tutorData,
+            'notifications' => [],
+            'weekly_stats' => [
+                'lessons' => $user->tutorBookings()->whereBetween('scheduled_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
+                'earnings' => (float) $user->tutorBookings()->whereBetween('completed_at', [now()->startOfWeek(), now()->endOfWeek()])->sum('price'),
+                'newStudents' => $user->tutorBookings()->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->distinct('student_id')->count(),
+                'occupancyRate' => 85,
+            ],
+        ];
+
+        Log::info('Dashboard Debug - Full Response:', $response);
+
+        return response()->json($response);
+    }
+
+    private function getSubscriptionFeatures($planType)
+    {
+        switch ($planType) {
+            case 'free_trial':
+                return ['Up to 5 bookings per month', 'Basic profile', 'Email support'];
+            case 'basic':
+                return ['Unlimited bookings', 'Enhanced profile', 'Email support'];
+            case 'premium':
+                return ['Unlimited bookings', 'Featured profile', 'Priority support', 'Analytics'];
+            default:
+                return [];
+        }
     }
 }

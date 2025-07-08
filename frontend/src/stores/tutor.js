@@ -1,4 +1,6 @@
 // frontend/src/stores/tutor.js
+// Complete replacement to remove ALL mock data
+
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
@@ -26,21 +28,14 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
+      console.log('🔄 Loading dashboard data from API...')
       const response = await api.get('/tutor/dashboard')
       dashboard.value = response.data
-
+      console.log('✅ Dashboard loaded successfully')
       return response.data
     } catch (err) {
       error.value = err.response?.data?.message || 'Eroare la încărcarea dashboard-ului'
-      console.error('Dashboard error:', err)
-
-      // Fallback to mock data for development
-      if (err.response?.status === 404 || err.code === 'ECONNREFUSED') {
-        console.warn('API not available, using mock data')
-        dashboard.value = getMockDashboardData()
-        return dashboard.value
-      }
-
+      console.error('❌ Dashboard error:', err)
       throw err
     } finally {
       loading.value = false
@@ -52,14 +47,17 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
+      console.log(`🔄 Confirming booking ${bookingId}...`)
       const response = await api.patch(`/bookings/${bookingId}/confirm`)
+      console.log(`✅ Booking ${bookingId} confirmed successfully`)
 
-      // Update local state
+      // Update local state - move booking from pending to upcoming
       if (dashboard.value?.pending_bookings) {
         const bookingIndex = dashboard.value.pending_bookings.findIndex(b => b.id === bookingId)
         if (bookingIndex !== -1) {
           const booking = dashboard.value.pending_bookings[bookingIndex]
           booking.status = 'confirmed'
+          booking.confirmed_at = new Date().toISOString()
 
           // Move to upcoming bookings
           dashboard.value.upcoming_bookings = dashboard.value.upcoming_bookings || []
@@ -72,6 +70,7 @@ export const useTutorStore = defineStore('tutor', () => {
 
       return response.data
     } catch (err) {
+      console.error(`❌ Error confirming booking ${bookingId}:`, err)
       error.value = err.response?.data?.message || 'Eroare la confirmarea rezervării'
       throw err
     } finally {
@@ -84,9 +83,13 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      const response = await api.patch(`/bookings/${bookingId}/cancel`)
+      console.log(`🔄 Rejecting booking ${bookingId}...`)
+      const response = await api.patch(`/bookings/${bookingId}/cancel`, {
+        cancellation_reason: 'Respinsă de tutor'
+      })
+      console.log(`✅ Booking ${bookingId} rejected successfully`)
 
-      // Update local state
+      // Update local state - remove from pending bookings
       if (dashboard.value?.pending_bookings) {
         const bookingIndex = dashboard.value.pending_bookings.findIndex(b => b.id === bookingId)
         if (bookingIndex !== -1) {
@@ -96,6 +99,7 @@ export const useTutorStore = defineStore('tutor', () => {
 
       return response.data
     } catch (err) {
+      console.error(`❌ Error rejecting booking ${bookingId}:`, err)
       error.value = err.response?.data?.message || 'Eroare la respingerea rezervării'
       throw err
     } finally {
@@ -108,13 +112,16 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
+      console.log(`🔄 Confirming cash payment for booking ${bookingId}...`)
       const response = await api.patch(`/bookings/${bookingId}/confirm-payment`)
+      console.log(`✅ Cash payment confirmed for booking ${bookingId}`)
 
-      // Refresh dashboard data
+      // Refresh dashboard data to update pending payments
       await getDashboard()
 
       return response.data
     } catch (err) {
+      console.error(`❌ Error confirming cash payment for booking ${bookingId}:`, err)
       error.value = err.response?.data?.message || 'Eroare la confirmarea plății'
       throw err
     } finally {
@@ -127,19 +134,14 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
+      console.log('🔄 Loading bookings from API...')
       const response = await api.get('/bookings', { params: filters })
       bookings.value = response.data.bookings
+      console.log('✅ Bookings loaded successfully')
       return response.data
     } catch (err) {
       error.value = err.response?.data?.message || 'Eroare la încărcarea rezervărilor'
-
-      // Fallback to mock data
-      if (err.response?.status === 404 || err.code === 'ECONNREFUSED') {
-        const mockData = getMockBookingsData()
-        bookings.value = mockData
-        return { bookings: mockData }
-      }
-
+      console.error('❌ Bookings error:', err)
       throw err
     } finally {
       loading.value = false
@@ -151,19 +153,14 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
+      console.log('🔄 Loading reviews from API...')
       const response = await api.get('/reviews')
       reviews.value = response.data.reviews
+      console.log('✅ Reviews loaded successfully')
       return response.data
     } catch (err) {
       error.value = err.response?.data?.message || 'Eroare la încărcarea recenziilor'
-
-      // Fallback to mock data
-      if (err.response?.status === 404 || err.code === 'ECONNREFUSED') {
-        const mockData = getMockReviewsData()
-        reviews.value = mockData
-        return { reviews: mockData }
-      }
-
+      console.error('❌ Reviews error:', err)
       throw err
     } finally {
       loading.value = false
@@ -175,7 +172,9 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
+      console.log('🔄 Updating tutor profile...')
       const response = await api.put('/tutor/profile', profileData)
+      console.log('✅ Profile updated successfully')
 
       // Update local profile data
       if (dashboard.value?.tutor) {
@@ -184,6 +183,7 @@ export const useTutorStore = defineStore('tutor', () => {
 
       return response.data
     } catch (err) {
+      console.error('❌ Error updating profile:', err)
       error.value = err.response?.data?.message || 'Eroare la actualizarea profilului'
       throw err
     } finally {
@@ -196,10 +196,14 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
+      console.log('🔄 Updating tutor availability...')
       const response = await api.put('/tutor/availability', availabilityData)
+      console.log('✅ Availability updated successfully')
+
       availability.value = response.data.availability
       return response.data
     } catch (err) {
+      console.error('❌ Error updating availability:', err)
       error.value = err.response?.data?.message || 'Eroare la actualizarea disponibilității'
       throw err
     } finally {
@@ -222,89 +226,6 @@ export const useTutorStore = defineStore('tutor', () => {
     loading.value = false
     error.value = null
   }
-
-  // Mock data functions for fallback
-  const getMockDashboardData = () => ({
-    stats: {
-      total_earnings: 2450,
-      total_lessons: 127,
-      average_rating: 4.8,
-      total_reviews: 89,
-      this_month_bookings: 23,
-      pending_payments: 350
-    },
-    subscription: {
-      plan_type: 'free_trial',
-      trial_days_remaining: 7,
-      expires_at: '2025-07-21',
-      features: ['Up to 5 bookings per month', 'Basic profile', 'Email support']
-    },
-    pending_bookings: [
-      {
-        id: 1,
-        student: { full_name: 'Maria Popescu', email: 'maria@email.com' },
-        subject: { name: 'Matematică' },
-        scheduled_at: '2025-07-08T10:00:00',
-        lesson_type: 'online',
-        price: 75,
-        status: 'pending'
-      },
-      {
-        id: 2,
-        student: { full_name: 'Ion Ionescu', email: 'ion@email.com' },
-        subject: { name: 'Fizică' },
-        scheduled_at: '2025-07-08T14:30:00',
-        lesson_type: 'in_person',
-        price: 80,
-        status: 'pending'
-      }
-    ],
-    upcoming_bookings: [
-      {
-        id: 3,
-        student: { full_name: 'Ana Georgescu', email: 'ana@email.com' },
-        subject: { name: 'Chimie' },
-        scheduled_at: '2025-07-09T09:00:00',
-        lesson_type: 'online',
-        price: 70,
-        status: 'confirmed'
-      }
-    ],
-    recent_reviews: [
-      {
-        id: 1,
-        student: { full_name: 'Alexandra M.' },
-        rating: 5,
-        comment: 'Explicații foarte clare și răbdare multă. Recomand!',
-        subject: 'Matematică',
-        date: '2025-07-05',
-        created_at: '2025-07-05T14:30:00'
-      }
-    ]
-  })
-
-  const getMockBookingsData = () => [
-    {
-      id: 1,
-      student: { full_name: 'Maria Popescu', email: 'maria@email.com' },
-      subject: { name: 'Matematică' },
-      scheduled_at: '2025-07-08T10:00:00',
-      lesson_type: 'online',
-      price: 75,
-      status: 'pending'
-    }
-  ]
-
-  const getMockReviewsData = () => [
-    {
-      id: 1,
-      student: { full_name: 'Alexandra M.' },
-      rating: 5,
-      comment: 'Explicații foarte clare și răbdare multă. Recomand!',
-      subject: 'Matematică',
-      date: '2025-07-05'
-    }
-  ]
 
   return {
     // State
