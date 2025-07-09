@@ -181,21 +181,58 @@ export const useTutorStore = defineStore('tutor', () => {
     }
   }
 
-  const getReviews = async () => {
-    loading.value = true
-    error.value = null
+  const getReviews = async (params = {}) => {
+  loading.value = true
+  error.value = null
 
-    try {
-      const response = await api.get('tutor/reviews')
-      reviews.value = response.data.reviews
-      return response.data
-    } catch (err) {
-      error.value = err.response?.data?.message || 'Eroare la încărcarea recenziilor'
-      throw err
-    } finally {
-      loading.value = false
-    }
+  try {
+    const response = await api.get('tutor/reviews', { params })
+    reviews.value = response.data.reviews
+
+    console.log('Reviews loaded from API:', response.data)
+
+    return response.data
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Eroare la încărcarea recenziilor'
+    console.error('Error loading reviews:', err)
+    throw err
+  } finally {
+    loading.value = false
   }
+}
+
+  const submitReply = async (reviewId, replyText) => {
+  loading.value = true
+  error.value = null
+
+  try {
+    const response = await api.post(`reviews/${reviewId}/reply`, {
+      reply: replyText
+    })
+
+    // Update local reviews state
+    const reviewIndex = reviews.value.findIndex(r => r.id === reviewId)
+    if (reviewIndex !== -1) {
+      reviews.value[reviewIndex] = {
+        ...reviews.value[reviewIndex],
+        reply: replyText,
+        reply_date: new Date().toISOString()
+      }
+    }
+
+    console.log('Reply submitted:', response.data)
+
+    return response.data
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Eroare la trimiterea răspunsului'
+    console.error('Error submitting reply:', err)
+    throw err
+  } finally {
+    loading.value = false
+  }
+}
+
+
 
   const getProfile = async () => {
     loading.value = true
@@ -321,6 +358,7 @@ export const useTutorStore = defineStore('tutor', () => {
     completeBooking,
     getBookings,
     getReviews,
+    submitReply,
     getProfile,
     updateProfile,
     updateAvailability,

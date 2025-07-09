@@ -101,6 +101,7 @@ Route::prefix('v1')->group(function () {
         // Review routes
         Route::prefix('reviews')->group(function () {
             Route::post('/', [ReviewController::class, 'store']);
+            Route::post('{review}/reply', [ReviewController::class, 'reply']);
         });
 
         // Payment routes

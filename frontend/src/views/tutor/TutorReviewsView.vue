@@ -1,316 +1,319 @@
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-    <div class="max-w-6xl mx-auto" style="padding: 2rem 1rem;">
+    <div class="max-w-7xl mx-auto py-8 px-4">
       <!-- Header -->
       <div class="mb-8">
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-bold text-gray-900">Recenzii</h1>
-            <p class="text-gray-600 mt-1">Vezi ce spun studenții despre lecțiile tale</p>
+            <p class="text-gray-600 mt-1">Vezi toate recenziile primite de la studenți</p>
           </div>
-          <router-link
-            :to="{ name: 'tutor-dashboard' }"
-            class="bg-white border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors"
-            style="padding: 0.5rem 1rem;"
-          >
-            ← Înapoi la dashboard
-          </router-link>
+          <div class="flex items-center space-x-4">
+            <router-link
+              :to="{ name: 'tutor-dashboard' }"
+              class="bg-white border border-gray-300 text-gray-700 font-medium px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              ← Înapoi la dashboard
+            </router-link>
+            <button
+              @click="refreshReviews"
+              class="bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold px-6 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+            >
+              Reîmprospătează
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Stats Overview -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200" style="padding: 1.5rem;">
-          <div class="text-center">
-            <div class="text-3xl font-bold text-purple-600 mb-2">{{ overallRating }}</div>
-            <div class="flex justify-center items-center mb-2">
-              <div v-for="i in 5" :key="i" class="w-5 h-5">
-                <svg
-                  class="w-5 h-5"
-                  :class="i <= Math.round(overallRating) ? 'text-yellow-400' : 'text-gray-300'"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                </svg>
+      <!-- Loading State -->
+      <div v-if="loading" class="flex items-center justify-center py-12">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <span class="ml-3 text-gray-600">Se încarcă recenziile...</span>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Eroare la încărcarea recenziilor</h3>
+            <p class="text-sm text-red-700 mt-1">{{ error }}</p>
+          </div>
+          <div class="ml-auto">
+            <button
+              @click="refreshReviews"
+              class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Încearcă din nou
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div v-else>
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="text-center">
+              <div class="flex items-center justify-center mb-3">
+                <div class="text-3xl font-bold text-yellow-600">{{ overallRating }}</div>
+                <div class="flex items-center ml-2">
+                  <svg
+                    v-for="star in 5"
+                    :key="star"
+                    class="w-5 h-5"
+                    :class="star <= Math.round(overallRating) ? 'text-yellow-400' : 'text-gray-300'"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                </div>
               </div>
+              <p class="text-sm text-gray-600">Rating general</p>
             </div>
-            <p class="text-sm text-gray-600">Rating general</p>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="text-center">
+              <div class="text-3xl font-bold text-blue-600 mb-2">{{ totalReviews }}</div>
+              <p class="text-sm text-gray-600">Total recenzii</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="text-center">
+              <div class="text-3xl font-bold text-green-600 mb-2">{{ positivePercentage }}%</div>
+              <p class="text-sm text-gray-600">Recenzii pozitive</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div class="text-center">
+              <div class="text-3xl font-bold text-orange-600 mb-2">{{ averageResponseTime }}h</div>
+              <p class="text-sm text-gray-600">Timp răspuns mediu</p>
+            </div>
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200" style="padding: 1.5rem;">
-          <div class="text-center">
-            <div class="text-3xl font-bold text-blue-600 mb-2">{{ totalReviews }}</div>
-            <p class="text-sm text-gray-600">Total recenzii</p>
-          </div>
-        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <!-- Reviews List -->
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200">
+              <div class="border-b border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-6">
+                  <h2 class="text-xl font-semibold text-gray-900">Toate recenziile</h2>
+                  <div class="flex items-center space-x-4">
+                    <!-- Search -->
+                    <div class="relative">
+                      <input
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Caută în recenzii..."
+                        class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                      <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
 
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200" style="padding: 1.5rem;">
-          <div class="text-center">
-            <div class="text-3xl font-bold text-green-600 mb-2">{{ positivePercentage }}%</div>
-            <p class="text-sm text-gray-600">Recenzii pozitive</p>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200" style="padding: 1.5rem;">
-          <div class="text-center">
-            <div class="text-3xl font-bold text-orange-600 mb-2">{{ averageResponseTime }}h</div>
-            <p class="text-sm text-gray-600">Timp răspuns mediu</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Reviews List -->
-        <div class="lg:col-span-2">
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-200">
-            <div class="border-b border-gray-100" style="padding: 1.5rem;">
-              <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-gray-900">Recenzii recente</h2>
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-4">
+                  <!-- Sort -->
                   <select
                     v-model="sortBy"
-                    @change="sortReviews"
-                    class="border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    style="padding: 0.5rem 0.75rem;"
+                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
-                    <option value="newest">Cel mai recente</option>
-                    <option value="oldest">Cel mai vechi</option>
+                    <option value="newest">Cele mai noi</option>
+                    <option value="oldest">Cele mai vechi</option>
                     <option value="highest">Rating cel mai mare</option>
                     <option value="lowest">Rating cel mai mic</option>
                   </select>
+
+                  <!-- Filter by rating -->
+                  <select
+                    v-model="filterByRating"
+                    class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">Toate rating-urile</option>
+                    <option value="5">5 stele</option>
+                    <option value="4">4 stele</option>
+                    <option value="3">3 stele</option>
+                    <option value="2">2 stele</option>
+                    <option value="1">1 stea</option>
+                  </select>
                 </div>
               </div>
-            </div>
 
-            <div style="padding: 1.5rem;">
-              <!-- Loading State -->
-              <div v-if="loading" class="space-y-6">
-                <div v-for="i in 5" :key="i" class="animate-pulse">
-                  <div class="flex items-start space-x-4">
-                    <div class="w-12 h-12 bg-gray-200 rounded-full"></div>
-                    <div class="flex-1">
-                      <div class="h-4 bg-gray-200 rounded mb-2"></div>
-                      <div class="h-3 bg-gray-200 rounded w-2/3 mb-2"></div>
-                      <div class="h-16 bg-gray-200 rounded"></div>
-                    </div>
+              <div class="p-6">
+                <!-- No Reviews -->
+                <div v-if="filteredAndSortedReviews.length === 0" class="text-center py-12">
+                  <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                    </svg>
                   </div>
+                  <h3 class="text-lg font-medium text-gray-900 mb-2">Nicio recenzie</h3>
+                  <p class="text-gray-600">Recenziile vor apărea aici după ce studenții îți vor evalua lecțiile.</p>
                 </div>
-              </div>
 
-              <!-- No Reviews -->
-              <div v-else-if="sortedReviews.length === 0" class="text-center" style="padding: 3rem 0;">
-                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                  </svg>
-                </div>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Nicio recenzie încă</h3>
-                <p class="text-gray-600">Recenziile studenților vor apărea aici după lecții.</p>
-              </div>
-
-              <!-- Reviews List -->
-              <div v-else class="space-y-6">
-                <div
-                  v-for="review in sortedReviews"
-                  :key="review.id"
-                  class="border border-gray-200 rounded-xl"
-                  style="padding: 1.5rem;"
-                >
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="flex items-center space-x-4">
-                      <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-semibold">
-                        {{ getInitials(review.student.full_name) }}
+                <!-- Reviews List -->
+                <div v-else class="space-y-6">
+                  <div
+                    v-for="review in filteredAndSortedReviews"
+                    :key="review.id"
+                    class="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow"
+                  >
+                    <div class="flex items-center space-x-3 mb-4">
+                      <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                        <span class="text-white text-sm font-bold">{{ getInitials(getSafeName(review)) }}</span>
                       </div>
                       <div>
-                        <h4 class="font-semibold text-gray-900">{{ review.student.full_name }}</h4>
-                        <p class="text-sm text-gray-600">{{ review.subject }}</p>
-                        <p class="text-xs text-gray-500">{{ formatDate(review.date) }}</p>
+                        <h4 class="font-semibold text-gray-900">{{ getSafeName(review) }}</h4>
+                        <p class="text-sm text-gray-600">{{ review.subject?.name || 'Materie necunoscută' }}</p>
+                      </div>
+                      <div class="ml-auto text-right">
+                        <div class="flex items-center mb-1">
+                          <svg
+                            v-for="star in 5"
+                            :key="star"
+                            class="w-4 h-4"
+                            :class="star <= review.rating ? 'text-yellow-400' : 'text-gray-300'"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                          </svg>
+                        </div>
+                        <span class="text-sm text-gray-600">{{ formatDate(review.created_at) }}</span>
                       </div>
                     </div>
-                    <div class="flex items-center space-x-1">
-                      <div v-for="i in 5" :key="i" class="w-4 h-4">
-                        <svg
-                          class="w-4 h-4"
-                          :class="i <= review.rating ? 'text-yellow-400' : 'text-gray-300'"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+
+                    <div class="mb-4">
+                      <p class="text-gray-700 leading-relaxed">{{ review.comment }}</p>
+                    </div>
+
+                    <!-- Tutor Reply -->
+                    <div v-if="review.reply" class="bg-blue-50 rounded-lg p-4 mt-4">
+                      <div class="flex items-center mb-2">
+                        <svg class="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
                         </svg>
+                        <span class="text-sm font-semibold text-blue-800">Răspunsul tău</span>
+                        <span class="text-xs text-blue-600 ml-2">{{ formatDate(review.reply_date) }}</span>
                       </div>
-                      <span class="text-sm font-medium text-gray-600" style="margin-left: 0.5rem;">{{ review.rating }}/5</span>
+                      <p class="text-blue-700 text-sm">{{ review.reply }}</p>
                     </div>
-                  </div>
 
-                  <p class="text-gray-700 mb-4">{{ review.comment }}</p>
-
-                  <!-- Tags from review -->
-                  <div v-if="review.tags && review.tags.length > 0" class="flex flex-wrap gap-2 mb-4">
-                    <span
-                      v-for="tag in review.tags"
-                      :key="tag"
-                      class="bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
-                      style="padding: 0.25rem 0.5rem;"
-                    >
-                      {{ tag }}
-                    </span>
-                  </div>
-
-                  <!-- Reply Section -->
-                  <div v-if="review.reply" class="mt-4 bg-gray-50 rounded-lg" style="padding: 1rem;">
-                    <div class="flex items-start space-x-3">
-                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white text-sm font-semibold">
-                        Tu
-                      </div>
-                      <div class="flex-1">
-                        <p class="text-sm text-gray-700">{{ review.reply }}</p>
-                        <p class="text-xs text-gray-500 mt-1">{{ formatDate(review.replyDate) }}</p>
+                    <!-- Reply Form -->
+                    <div v-else-if="activeReplyForm === review.id" class="mt-4">
+                      <div class="bg-gray-50 rounded-lg p-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Răspunde la recenzie</label>
+                        <textarea
+                          v-model="replyText"
+                          rows="3"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Scrie răspunsul tău aici..."
+                        ></textarea>
+                        <div class="flex items-center justify-end space-x-3 mt-3">
+                          <button
+                            @click="cancelReply"
+                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                          >
+                            Anulează
+                          </button>
+                          <button
+                            @click="submitReply(review.id)"
+                            :disabled="!replyText.trim() || submittingReply"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <span v-if="submittingReply">Se trimite...</span>
+                            <span v-else>Trimite răspuns</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <!-- Reply Button -->
-                  <div v-else class="mt-4">
-                    <button
-                      @click="showReplyForm(review.id)"
-                      class="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Răspunde la recenzie
-                    </button>
-                  </div>
-
-                  <!-- Reply Form -->
-                  <div v-if="activeReplyForm === review.id" class="mt-4 bg-gray-50 rounded-lg" style="padding: 1rem;">
-                    <textarea
-                      v-model="replyText"
-                      rows="3"
-                      placeholder="Scrie un răspuns..."
-                      class="w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      style="padding: 0.75rem;"
-                    ></textarea>
-                    <div class="flex justify-end space-x-2 mt-3">
+                    <!-- Reply Button -->
+                    <div v-else class="mt-4">
                       <button
-                        @click="cancelReply"
-                        class="text-gray-600 hover:text-gray-800"
-                        style="padding: 0.5rem 1rem;"
+                        @click="showReplyForm(review.id)"
+                        class="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
                       >
-                        Anulează
-                      </button>
-                      <button
-                        @click="submitReply(review.id)"
-                        :disabled="!replyText.trim() || submittingReply"
-                        class="bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                        style="padding: 0.5rem 1rem;"
-                      >
-                        {{ submittingReply ? 'Se trimite...' : 'Trimite răspuns' }}
+                        Răspunde la recenzie
                       </button>
                     </div>
                   </div>
+                </div>
+
+                <!-- Pagination -->
+                <div v-if="totalPages > 1" class="mt-8 flex items-center justify-center space-x-2">
+                  <button
+                    @click="changePage(currentPage - 1)"
+                    :disabled="currentPage === 1"
+                    class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Anterior
+                  </button>
+
+                  <span class="px-3 py-2 text-sm text-gray-700">
+                    Pagina {{ currentPage }} din {{ totalPages }}
+                  </span>
+
+                  <button
+                    @click="changePage(currentPage + 1)"
+                    :disabled="currentPage === totalPages"
+                    class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Următorul
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-          <!-- Rating Breakdown -->
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-200" style="padding: 1.5rem;">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribuția rating-urilor</h3>
-            <div class="space-y-3">
-              <div v-for="rating in [5, 4, 3, 2, 1]" :key="rating" class="flex items-center">
-                <span class="text-sm text-gray-600 w-3">{{ rating }}</span>
-                <svg class="w-4 h-4 text-yellow-400 fill-current" style="margin-left: 0.25rem;" viewBox="0 0 20 20">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                </svg>
-                <div class="flex-1 bg-gray-200 rounded-full h-2" style="margin-left: 0.5rem;">
-                  <div
-                    class="bg-yellow-400 h-2 rounded-full transition-all duration-300"
-                    :style="{ width: getRatingPercentage(rating) + '%' }"
-                  />
+          <!-- Right Sidebar -->
+          <div class="space-y-6">
+            <!-- Rating Breakdown -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribuția rating-urilor</h3>
+              <div class="space-y-3">
+                <div v-for="rating in [5, 4, 3, 2, 1]" :key="rating" class="flex items-center">
+                  <span class="text-sm font-medium text-gray-600 w-3">{{ rating }}</span>
+                  <svg class="w-4 h-4 text-yellow-400 mx-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                  <div class="flex-1 mx-2">
+                    <div class="bg-gray-200 rounded-full h-2">
+                      <div
+                        class="bg-yellow-400 h-2 rounded-full"
+                        :style="{ width: getRatingPercentage(rating) + '%' }"
+                      ></div>
+                    </div>
+                  </div>
+                  <span class="text-sm text-gray-600 w-8">{{ getRatingCount(rating) }}</span>
                 </div>
-                <span class="text-sm text-gray-600 w-8" style="margin-left: 0.5rem;">
-                  {{ getRatingCount(rating) }}
+              </div>
+            </div>
+
+            <!-- Top Tags -->
+            <div v-if="topTags.length > 0" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-900 mb-4">Cuvinte frecvente</h3>
+              <div class="flex flex-wrap gap-2">
+                <span
+                  v-for="tag in topTags"
+                  :key="tag.name"
+                  class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
+                >
+                  {{ tag.name }}
+                  <span class="ml-1 text-xs bg-blue-200 text-blue-800 rounded-full px-2 py-0.5">{{ tag.count }}</span>
                 </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Most Mentioned Tags -->
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-200" style="padding: 1.5rem;">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Cel mai des menționat</h3>
-            <div class="space-y-3">
-              <div
-                v-for="tag in topTags"
-                :key="tag.name"
-                class="flex items-center justify-between"
-              >
-                <span class="text-sm text-gray-700">{{ tag.name }}</span>
-                <div class="flex items-center space-x-2">
-                  <div class="w-16 bg-gray-200 rounded-full h-2">
-                    <div
-                      class="bg-blue-400 h-2 rounded-full"
-                      :style="{ width: (tag.count / topTags[0]?.count || 1) * 100 + '%' }"
-                    />
-                  </div>
-                  <span class="text-sm font-medium text-gray-900">{{ tag.count }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tips for Better Reviews -->
-          <div class="bg-white rounded-2xl shadow-sm border border-gray-200" style="padding: 1.5rem;">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Sfaturi pentru recenzii mai bune</h3>
-            <div class="space-y-4">
-              <div class="flex items-start space-x-3">
-                <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="text-sm font-medium text-gray-900">Fii punctual</h4>
-                  <p class="text-xs text-gray-600">Punctualitatea este foarte apreciată de studenți.</p>
-                </div>
-              </div>
-
-              <div class="flex items-start space-x-3">
-                <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.13 8.13 0 01-3.9-.96L5 20l1.94-4.1A8.13 8.13 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="text-sm font-medium text-gray-900">Comunică clar</h4>
-                  <p class="text-xs text-gray-600">Explică conceptele pas cu pas și verifică înțelegerea.</p>
-                </div>
-              </div>
-
-              <div class="flex items-start space-x-3">
-                <div class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="text-sm font-medium text-gray-900">Oferă materiale</h4>
-                  <p class="text-xs text-gray-600">Trimite exerciții sau resurse suplimentare.</p>
-                </div>
-              </div>
-
-              <div class="flex items-start space-x-3">
-                <div class="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
-                  </svg>
-                </div>
-                <div>
-                  <h4 class="text-sm font-medium text-gray-900">Răspunde la recenzii</h4>
-                  <p class="text-xs text-gray-600">Mulțumește pentru feedback și arată că îți pasă.</p>
-                </div>
               </div>
             </div>
           </div>
@@ -321,64 +324,31 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useTutorStore } from '@/stores/tutor'
 
-const router = useRouter()
+const tutorStore = useTutorStore()
 
-// Reactive data
+// Reactive state
+const reviews = ref([])
 const loading = ref(false)
-const submittingReply = ref(false)
+const error = ref(null)
+
+// Sorting and filtering
+const sortBy = ref('newest')
+const filterByRating = ref('all')
+const searchQuery = ref('')
+
+// Reply functionality
 const activeReplyForm = ref(null)
 const replyText = ref('')
-const sortBy = ref('newest')
+const submittingReply = ref(false)
 
-const reviews = ref([
-  {
-    id: 1,
-    student: { full_name: 'Alexandra Munteanu' },
-    rating: 5,
-    comment: 'Explicații foarte clare și răbdare multă. Recomand cu încredere!',
-    subject: 'Matematică',
-    date: '2025-07-05',
-    tags: ['Explicații clare', 'Răbdare', 'Punctualitate'],
-    reply: null,
-    replyDate: null
-  },
-  {
-    id: 2,
-    student: { full_name: 'Cristian Pavel' },
-    rating: 4,
-    comment: 'Profesor foarte bun, m-a ajutat mult la pregătirea pentru BAC. Îi mulțumesc!',
-    subject: 'Fizică',
-    date: '2025-07-03',
-    tags: ['Pregătire BAC', 'Profesionalism'],
-    reply: 'Mulțumesc pentru recenzie! A fost o plăcere să te ajut la pregătirea pentru BAC. Mult succes!',
-    replyDate: '2025-07-04'
-  },
-  {
-    id: 3,
-    student: { full_name: 'Maria Ionescu' },
-    rating: 5,
-    comment: 'Cea mai bună profesoară de chimie! Explică totul foarte clar și are materiale excelente.',
-    subject: 'Chimie',
-    date: '2025-07-01',
-    tags: ['Explicații clare', 'Materiale utile', 'Profesionalism'],
-    reply: null,
-    replyDate: null
-  },
-  {
-    id: 4,
-    student: { full_name: 'Andrei Popescu' },
-    rating: 4,
-    comment: 'Lecții foarte utile, am înțeles conceptele pe care nu le știam. Recomand!',
-    subject: 'Matematică',
-    date: '2025-06-28',
-    tags: ['Înțelegere concepte', 'Utilitate'],
-    reply: 'Îți mulțumesc, Andrei! Mă bucur că ai înțeles conceptele. Succes în continuare!',
-    replyDate: '2025-06-29'
-  }
-])
+// Pagination
+const currentPage = ref(1)
+const totalPages = ref(1)
+const totalReviews = ref(0)
+const perPage = ref(15)
 
 // Computed properties
 const overallRating = computed(() => {
@@ -387,8 +357,6 @@ const overallRating = computed(() => {
   return Math.round((sum / reviews.value.length) * 10) / 10
 })
 
-const totalReviews = computed(() => reviews.value.length)
-
 const positivePercentage = computed(() => {
   if (reviews.value.length === 0) return 0
   const positiveReviews = reviews.value.filter(review => review.rating >= 4).length
@@ -396,33 +364,67 @@ const positivePercentage = computed(() => {
 })
 
 const averageResponseTime = computed(() => {
-  return 2.4
+  // Calculate based on actual data
+  const reviewsWithReplies = reviews.value.filter(r => r.reply && r.reply_date)
+  if (reviewsWithReplies.length === 0) return 0
+
+  let totalHours = 0
+  reviewsWithReplies.forEach(review => {
+    const reviewDate = new Date(review.created_at)
+    const replyDate = new Date(review.reply_date)
+    const diffHours = (replyDate - reviewDate) / (1000 * 60 * 60)
+    totalHours += diffHours
+  })
+
+  return Math.round((totalHours / reviewsWithReplies.length) * 10) / 10
 })
 
-const sortedReviews = computed(() => {
-  const sorted = [...reviews.value]
+const filteredAndSortedReviews = computed(() => {
+  let filtered = [...reviews.value]
 
+  // Filter by search query
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(review =>
+      review.comment?.toLowerCase().includes(query) ||
+      getSafeName(review).toLowerCase().includes(query) ||
+      review.subject?.name?.toLowerCase().includes(query)
+    )
+  }
+
+  // Filter by rating
+  if (filterByRating.value !== 'all') {
+    const rating = parseInt(filterByRating.value)
+    filtered = filtered.filter(review => review.rating === rating)
+  }
+
+  // Sort
   switch (sortBy.value) {
     case 'newest':
-      return sorted.sort((a, b) => new Date(b.date) - new Date(a.date))
+      return filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     case 'oldest':
-      return sorted.sort((a, b) => new Date(a.date) - new Date(b.date))
+      return filtered.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
     case 'highest':
-      return sorted.sort((a, b) => b.rating - a.rating)
+      return filtered.sort((a, b) => b.rating - a.rating)
     case 'lowest':
-      return sorted.sort((a, b) => a.rating - b.rating)
+      return filtered.sort((a, b) => a.rating - b.rating)
     default:
-      return sorted
+      return filtered
   }
 })
 
 const topTags = computed(() => {
+  // Extract common positive words from comments as tags
   const tagCounts = {}
+  const commonWords = ['excelent', 'bun', 'foarte', 'profesionist', 'răbdător', 'clar', 'utilă', 'recomandat', 'înțeles', 'ajutat']
 
   reviews.value.forEach(review => {
-    if (review.tags) {
-      review.tags.forEach(tag => {
-        tagCounts[tag] = (tagCounts[tag] || 0) + 1
+    if (review.comment) {
+      const words = review.comment.toLowerCase().split(/\s+/)
+      commonWords.forEach(word => {
+        if (words.some(w => w.includes(word))) {
+          tagCounts[word] = (tagCounts[word] || 0) + 1
+        }
       })
     }
   })
@@ -433,13 +435,28 @@ const topTags = computed(() => {
     .slice(0, 6)
 })
 
-// Methods
+// Helper methods
+const getSafeName = (item) => {
+  if (item?.student?.first_name && item?.student?.last_name) {
+    return `${item.student.first_name} ${item.student.last_name}`
+  }
+  if (item?.student?.full_name) return item.student.full_name
+  if (item?.student?.first_name) return item.student.first_name
+  if (item?.student?.name) return item.student.name
+  if (item?.student_name) return item.student_name
+  return 'Student'
+}
+
 const getInitials = (fullName) => {
-  if (!fullName) return 'N/A'
-  return fullName.split(' ').map(name => name[0]).join('').toUpperCase()
+  if (!fullName || typeof fullName !== 'string') return 'S'
+  const nameParts = fullName.trim().split(' ').filter(part => part.length > 0)
+  if (nameParts.length === 0) return 'S'
+  if (nameParts.length === 1) return nameParts[0][0].toUpperCase()
+  return nameParts[0][0].toUpperCase() + nameParts[nameParts.length - 1][0].toUpperCase()
 }
 
 const formatDate = (dateString) => {
+  if (!dateString) return ''
   const date = new Date(dateString)
   return date.toLocaleDateString('ro-RO', {
     year: 'numeric',
@@ -458,8 +475,42 @@ const getRatingPercentage = (rating) => {
   return Math.round((count / reviews.value.length) * 100)
 }
 
-const sortReviews = () => {
-  // Sorting is handled by computed property
+// Actions
+const loadReviews = async (page = 1) => {
+  loading.value = true
+  error.value = null
+
+  try {
+    const params = {
+      page,
+      per_page: perPage.value
+    }
+
+    console.log('Loading reviews with params:', params)
+
+    const response = await tutorStore.getReviews(params)
+
+    reviews.value = response.reviews || []
+    currentPage.value = response.pagination?.current_page || 1
+    totalPages.value = response.pagination?.last_page || 1
+    totalReviews.value = response.pagination?.total || reviews.value.length
+
+    console.log('Reviews loaded:', {
+      count: reviews.value.length,
+      pagination: response.pagination
+    })
+
+    // Log first review structure for debugging
+    if (reviews.value.length > 0) {
+      console.log('First review structure:', reviews.value[0])
+    }
+
+  } catch (err) {
+    error.value = err.message || 'Eroare la încărcarea recenziilor'
+    console.error('Error loading reviews:', err)
+  } finally {
+    loading.value = false
+  }
 }
 
 const showReplyForm = (reviewId) => {
@@ -478,12 +529,13 @@ const submitReply = async (reviewId) => {
   submittingReply.value = true
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    await tutorStore.submitReply(reviewId, replyText.value)
 
+    // Update local state
     const review = reviews.value.find(r => r.id === reviewId)
     if (review) {
       review.reply = replyText.value
-      review.replyDate = new Date().toISOString().split('T')[0]
+      review.reply_date = new Date().toISOString()
     }
 
     activeReplyForm.value = null
@@ -498,8 +550,30 @@ const submitReply = async (reviewId) => {
   }
 }
 
+const changePage = (page) => {
+  if (page >= 1 && page <= totalPages.value && page !== currentPage.value) {
+    loadReviews(page)
+  }
+}
+
+const refreshReviews = () => {
+  loadReviews(currentPage.value)
+}
+
+// Watch for filter/sort changes to update display
+watch([sortBy, filterByRating, searchQuery], () => {
+  // Filters are handled by computed property, no need to reload from API
+  console.log('Filters changed:', {
+    sortBy: sortBy.value,
+    filterByRating: filterByRating.value,
+    searchQuery: searchQuery.value
+  })
+})
+
 // Lifecycle
 onMounted(() => {
-  console.log('Reviews component mounted')
+  console.log('Reviews component mounted, loading reviews...')
+  loadReviews()
 })
 </script>
+

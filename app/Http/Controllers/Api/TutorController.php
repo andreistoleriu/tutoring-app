@@ -773,30 +773,61 @@ public function getWeekSchedule(Request $request): JsonResponse
     /**
      * Get tutor reviews
      */
-    public function getReviews(Request $request): JsonResponse
-    {
-        $user = $request->user();
+        public function getReviews(Request $request): JsonResponse
+        {
+            $user = $request->user();
 
-        if (!$user->isTutor()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+            if (!$user->isTutor()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
 
-        $perPage = min($request->get('per_page', 15), 50);
+            $perPage = min($request->get('per_page', 15), 50);
+            $page = $request->get('page', 1);
 
-        $reviews = $user->receivedReviews()
-            ->with(['student', 'booking.subject'])
-            ->latest()
-            ->paginate($perPage);
+            // Get reviews for this tutor through their bookings
+            $reviews = Review::query()
+                ->whereHas('booking', function ($query) use ($user) {
+                    $query->where('tutor_id', $user->id);
+                })
+                ->with(['student', 'booking.subject'])
+                ->latest()
+                ->paginate($perPage, ['*'], 'page', $page);
 
-        return response()->json([
-            'reviews' => $reviews->items(),
-            'pagination' => [
-                'current_page' => $reviews->currentPage(),
-                'last_page' => $reviews->lastPage(),
-                'per_page' => $reviews->perPage(),
-                'total' => $reviews->total(),
-            ],
-        ]);
+            // Format the reviews data
+            $formattedReviews = $reviews->getCollection()->map(function ($review) {
+                return [
+                    'id' => $review->id,
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'student' => [
+                        'id' => $review->student->id,
+                        'first_name' => $review->student->first_name,
+                        'last_name' => $review->student->last_name,
+                        'full_name' => $review->student->first_name . ' ' . $review->student->last_name,
+                        'email' => $review->student->email,
+                    ],
+                    'subject' => [
+                        'id' => $review->booking->subject->id,
+                        'name' => $review->booking->subject->name,
+                    ],
+                    'booking_id' => $review->booking_id,
+                    'created_at' => $review->created_at->toISOString(),
+                    'reply' => $review->tutor_reply,
+                    'reply_date' => $review->tutor_reply_at ? $review->tutor_reply_at->toISOString() : null,
+                ];
+            });
+
+            return response()->json([
+                'reviews' => $formattedReviews,
+                'pagination' => [
+                    'current_page' => $reviews->currentPage(),
+                    'last_page' => $reviews->lastPage(),
+                    'per_page' => $reviews->perPage(),
+                    'total' => $reviews->total(),
+                    'from' => $reviews->firstItem(),
+                    'to' => $reviews->lastItem(),
+                ],
+            ]);
     }
 
     /**

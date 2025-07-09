@@ -86,21 +86,44 @@ class ReviewController extends Controller
         ]);
     }
 
-    public function reply(Request $request, $id): JsonResponse
+   public function reply(Request $request, Review $review): JsonResponse
     {
+        $user = $request->user();
+
+        // Make sure the review belongs to this tutor's booking
+        if ($review->booking->tutor_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'reply' => 'required|string|max:1000',
         ]);
 
-        $review = Review::where('tutor_id', $request->user()->id)
-            ->findOrFail($id);
-
-        $review->addTutorReply($validated['reply']);
-        $review->load(['student', 'tutor', 'booking']);
+        $review->update([
+            'tutor_reply' => $validated['reply'],
+            'tutor_reply_at' => now(),
+        ]);
 
         return response()->json([
-            'message' => 'Reply added successfully',
-            'review' => $review,
+            'message' => 'Reply submitted successfully',
+            'review' => [
+                'id' => $review->id,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'student' => [
+                    'id' => $review->student->id,
+                    'first_name' => $review->student->first_name,
+                    'last_name' => $review->student->last_name,
+                    'full_name' => $review->student->first_name . ' ' . $review->student->last_name,
+                ],
+                'subject' => [
+                    'id' => $review->booking->subject->id,
+                    'name' => $review->booking->subject->name,
+                ],
+                'created_at' => $review->created_at->toISOString(),
+                'reply' => $review->tutor_reply,
+                'reply_date' => $review->tutor_reply_at->toISOString(),
+            ]
         ]);
     }
 }
