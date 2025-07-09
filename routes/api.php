@@ -56,58 +56,56 @@ Route::prefix('v1')->group(function () {
     Route::get('locations', function () {
         $locations = \App\Models\Location::active()
             ->select('id', 'city', 'county', 'slug')
-            ->orderBy('county')
             ->orderBy('city')
             ->get();
 
         return response()->json([
-            'locations' => $locations->groupBy('county'),
-            'all_locations' => $locations, // Also provide flat list for easier filtering
+            'locations' => $locations
         ]);
     });
 
-    // Protected routes (require authentication)
+    // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
 
-        // Dashboard routes
-        Route::prefix('dashboard')->group(function () {
-            Route::get('stats', [DashboardController::class, 'stats']);
-            Route::get('recent-activity', [DashboardController::class, 'recentActivity']);
-        });
-
-        // Tutor-specific routes (check user type in controller)
+        // Tutor-specific routes
         Route::prefix('tutor')->group(function () {
             Route::get('dashboard', [TutorController::class, 'dashboard']);
-            Route::put('profile', [TutorController::class, 'updateProfile']);
-            Route::put('availability', [TutorController::class, 'updateAvailability']);
-            Route::get('availability', [TutorController::class, 'getAvailability']);
+            Route::get('schedule', [TutorController::class, 'getWeekSchedule']);
             Route::get('profile', [TutorController::class, 'getProfile']);
+            Route::post('profile', [TutorController::class, 'updateProfile']);
+            Route::put('profile', [TutorController::class, 'updateProfile']);
+            Route::get('availability', [TutorController::class, 'getAvailability']);
+            Route::post('availability', [TutorController::class, 'updateAvailability']);
+            Route::put('availability', [TutorController::class, 'updateAvailability']);
+            Route::get('bookings', [TutorController::class, 'getBookings']);
+            Route::get('reviews', [TutorController::class, 'getReviews']);
+            Route::get('earnings', [TutorController::class, 'getEarnings']);
         });
 
-        // Student-specific routes (check user type in controller)
+        // Student-specific routes
         Route::prefix('student')->group(function () {
-            Route::get('dashboard', [StudentController::class, 'dashboard']);
-            Route::put('profile', [StudentController::class, 'updateProfile']);
+            Route::get('dashboard', [StudentController::class, 'getDashboard']);
+            Route::get('bookings', [StudentController::class, 'getBookings']);
         });
 
-        // Booking routes (both tutors and students)
+        // Booking routes
         Route::prefix('bookings')->group(function () {
-            Route::get('/', [BookingController::class, 'index']);
             Route::post('/', [BookingController::class, 'store']);
             Route::get('{id}', [BookingController::class, 'show']);
             Route::patch('{id}/confirm', [BookingController::class, 'confirm']);
+            Route::patch('{id}/reject', [BookingController::class, 'reject']);
             Route::patch('{id}/complete', [BookingController::class, 'complete']);
             Route::patch('{id}/cancel', [BookingController::class, 'cancel']);
-            Route::patch('{id}/confirm-payment', [BookingController::class, 'confirmPayment']);
         });
 
         // Review routes
         Route::prefix('reviews')->group(function () {
             Route::post('/', [ReviewController::class, 'store']);
-            Route::get('{id}', [ReviewController::class, 'show']);
-            Route::put('{id}', [ReviewController::class, 'update']);
-            Route::delete('{id}', [ReviewController::class, 'destroy']);
-            Route::post('{id}/reply', [ReviewController::class, 'reply']);
+        });
+
+        // Payment routes
+        Route::prefix('payments')->group(function () {
+            Route::patch('{id}/confirm-cash', [BookingController::class, 'confirmCashPayment']);
         });
     });
 });
@@ -115,7 +113,6 @@ Route::prefix('v1')->group(function () {
 // Fallback route for API
 Route::fallback(function () {
     return response()->json([
-        'message' => 'API endpoint not found.',
-        'status' => 404
+        'message' => 'API endpoint not found'
     ], 404);
 });

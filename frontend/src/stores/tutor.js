@@ -1,5 +1,4 @@
-// Update your frontend/src/stores/tutor.js with corrected API paths
-
+// frontend/src/stores/tutor.js
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import api from '@/services/api'
@@ -12,6 +11,7 @@ export const useTutorStore = defineStore('tutor', () => {
   const reviews = ref([])
   const earnings = ref(null)
   const availability = ref([])
+  const weekSchedule = ref([])
   const loading = ref(false)
   const error = ref(null)
 
@@ -39,6 +39,28 @@ export const useTutorStore = defineStore('tutor', () => {
     }
   }
 
+  const getWeekSchedule = async (weekStart = null) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const params = {}
+      if (weekStart) {
+        params.week_start = weekStart
+      }
+
+      const response = await api.get('tutor/schedule', { params })
+      weekSchedule.value = response.data.schedule
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Eroare la încărcarea programului'
+      console.error('Schedule error:', err)
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const confirmBooking = async (bookingId) => {
     loading.value = true
     error.value = null
@@ -50,15 +72,14 @@ export const useTutorStore = defineStore('tutor', () => {
       if (dashboard.value?.pending_bookings) {
         const bookingIndex = dashboard.value.pending_bookings.findIndex(b => b.id === bookingId)
         if (bookingIndex !== -1) {
-          const booking = dashboard.value.pending_bookings[bookingIndex]
+          // Remove from pending and add to upcoming
+          const booking = dashboard.value.pending_bookings.splice(bookingIndex, 1)[0]
           booking.status = 'confirmed'
 
-          // Move to upcoming bookings
-          dashboard.value.upcoming_bookings = dashboard.value.upcoming_bookings || []
+          if (!dashboard.value.upcoming_bookings) {
+            dashboard.value.upcoming_bookings = []
+          }
           dashboard.value.upcoming_bookings.push(booking)
-
-          // Remove from pending
-          dashboard.value.pending_bookings.splice(bookingIndex, 1)
         }
       }
 
@@ -76,7 +97,7 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      const response = await api.patch(`bookings/${bookingId}/cancel`)
+      const response = await api.patch(`bookings/${bookingId}/reject`)
 
       // Update local state
       if (dashboard.value?.pending_bookings) {
@@ -95,23 +116,49 @@ export const useTutorStore = defineStore('tutor', () => {
     }
   }
 
-  const confirmCashPayment = async (bookingId) => {
+  const confirmCashPayment = async (paymentId) => {
     loading.value = true
     error.value = null
 
     try {
-      const response = await api.patch(`bookings/${bookingId}/confirm-payment`)
+      const response = await api.patch(`payments/${paymentId}/confirm-cash`)
 
-      // Update local state in dashboard if booking is there
+      // Update local state
       if (dashboard.value?.pending_cash_payments) {
-        dashboard.value.pending_cash_payments = dashboard.value.pending_cash_payments.filter(
-          payment => payment.id !== bookingId
-        )
+        const paymentIndex = dashboard.value.pending_cash_payments.findIndex(p => p.id === paymentId)
+        if (paymentIndex !== -1) {
+          dashboard.value.pending_cash_payments.splice(paymentIndex, 1)
+        }
       }
 
       return response.data
     } catch (err) {
-      error.value = err.response?.data?.message || 'Eroare la confirmarea plății cash'
+      error.value = err.response?.data?.message || 'Eroare la confirmarea plății'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const completeBooking = async (bookingId) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await api.patch(`bookings/${bookingId}/complete`)
+
+      // Update local state
+      if (dashboard.value?.upcoming_bookings) {
+        const bookingIndex = dashboard.value.upcoming_bookings.findIndex(b => b.id === bookingId)
+        if (bookingIndex !== -1) {
+          const booking = dashboard.value.upcoming_bookings[bookingIndex]
+          booking.status = 'completed'
+        }
+      }
+
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Eroare la finalizarea lecției'
       throw err
     } finally {
       loading.value = false
@@ -123,16 +170,27 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      const params = {
-        ...filters,
-        per_page: filters.per_page || 15
-      }
-
-      const response = await api.get('bookings', { params })
+      const response = await api.get('tutor/bookings', { params: filters })
       bookings.value = response.data.bookings
       return response.data
     } catch (err) {
       error.value = err.response?.data?.message || 'Eroare la încărcarea rezervărilor'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const getReviews = async () => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await api.get('tutor/reviews')
+      reviews.value = response.data.reviews
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Eroare la încărcarea recenziilor'
       throw err
     } finally {
       loading.value = false
@@ -145,7 +203,7 @@ export const useTutorStore = defineStore('tutor', () => {
 
     try {
       const response = await api.get('tutor/profile')
-      profile.value = response.data.tutor || response.data
+      profile.value = response.data.tutor
       return response.data
     } catch (err) {
       error.value = err.response?.data?.message || 'Eroare la încărcarea profilului'
@@ -187,6 +245,38 @@ export const useTutorStore = defineStore('tutor', () => {
     }
   }
 
+  const updateAvailability = async (availabilityData) => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await api.put('tutor/availability', availabilityData)
+      availability.value = response.data.availability
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Eroare la actualizarea disponibilității'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const getAvailability = async () => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await api.get('tutor/availability')
+      availability.value = response.data.availability
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.message || 'Eroare la încărcarea disponibilității'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const clearError = () => {
     error.value = null
   }
@@ -199,6 +289,7 @@ export const useTutorStore = defineStore('tutor', () => {
     reviews.value = []
     earnings.value = null
     availability.value = []
+    weekSchedule.value = []
     loading.value = false
     error.value = null
   }
@@ -211,6 +302,7 @@ export const useTutorStore = defineStore('tutor', () => {
     reviews,
     earnings,
     availability,
+    weekSchedule,
     loading,
     error,
 
@@ -222,12 +314,17 @@ export const useTutorStore = defineStore('tutor', () => {
 
     // Actions
     getDashboard,
+    getWeekSchedule,
     confirmBooking,
     rejectBooking,
     confirmCashPayment,
+    completeBooking,
     getBookings,
+    getReviews,
     getProfile,
     updateProfile,
+    updateAvailability,
+    getAvailability,
     clearError,
     $reset
   }

@@ -523,6 +523,253 @@ class TutorController extends Controller
         ]);
     }
 
+        /**
+     * Get tutor dashboard data
+     */
+    /**
+     * Get tutor dashboard data
+     */
+    public function getDashboard(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->isTutor()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $tutor = $user->tutor;
+        $currentDate = Carbon::now();
+        $weekStart = $currentDate->copy()->startOfWeek();
+        $weekEnd = $currentDate->copy()->endOfWeek();
+
+        // Get stats
+        $stats = [
+            'total_earnings' => $tutor->bookings()
+                ->where('status', 'completed')
+                ->where('payment_status', 'paid')
+                ->sum('price'),
+            'total_lessons' => $tutor->bookings()
+                ->where('status', 'completed')
+                ->count(),
+            'total_students' => $tutor->bookings()
+                ->distinct('student_id')
+                ->count(),
+            'average_rating' => $tutor->reviews()->avg('rating') ?: 0,
+            'this_week_earnings' => $tutor->bookings()
+                ->where('status', 'completed')
+                ->where('payment_status', 'paid')
+                ->whereBetween('scheduled_at', [$weekStart, $weekEnd])
+                ->sum('price'),
+            'this_week_lessons' => $tutor->bookings()
+                ->where('status', 'completed')
+                ->whereBetween('scheduled_at', [$weekStart, $weekEnd])
+                ->count(),
+        ];
+
+        // Get pending bookings
+        $pendingBookings = $tutor->bookings()
+            ->with(['student', 'subject'])
+            ->where('status', 'pending')
+            ->orderBy('scheduled_at', 'asc')
+            ->get()
+            ->map(function ($booking) {
+                return [
+                    'id' => $booking->id,
+                    'student' => [
+                        'full_name' => $booking->student->full_name,
+                        'email' => $booking->student->email,
+                    ],
+                    'subject' => [
+                        'name' => $booking->subject->name,
+                    ],
+                    'scheduled_at' => $booking->scheduled_at->toISOString(),
+                    'lesson_type' => $booking->lesson_type,
+                    'price' => $booking->price,
+                    'status' => $booking->status,
+                    'payment_method' => $booking->payment_method,
+                    'payment_status' => $booking->payment_status,
+                    'student_notes' => $booking->student_notes,
+                ];
+            });
+
+        // Get upcoming bookings
+        $upcomingBookings = $tutor->bookings()
+            ->with(['student', 'subject'])
+            ->where('status', 'confirmed')
+            ->where('scheduled_at', '>', $currentDate)
+            ->orderBy('scheduled_at', 'asc')
+            ->limit(5)
+            ->get()
+            ->map(function ($booking) {
+                return [
+                    'id' => $booking->id,
+                    'student' => [
+                        'full_name' => $booking->student->full_name,
+                        'email' => $booking->student->email,
+                    ],
+                    'subject' => [
+                        'name' => $booking->subject->name,
+                    ],
+                    'scheduled_at' => $booking->scheduled_at->toISOString(),
+                    'lesson_type' => $booking->lesson_type,
+                    'price' => $booking->price,
+                    'status' => $booking->status,
+                    'payment_method' => $booking->payment_method,
+                    'payment_status' => $booking->payment_status,
+                ];
+            });
+
+        // Get recent reviews
+        $recentReviews = $tutor->reviews()
+            ->with(['student', 'booking.subject'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(function ($review) {
+                return [
+                    'id' => $review->id,
+                    'student' => [
+                        'full_name' => $review->student->full_name,
+                    ],
+                    'rating' => $review->rating,
+                    'comment' => $review->comment,
+                    'subject' => $review->booking->subject->name,
+                    'created_at' => $review->created_at->toISOString(),
+                ];
+            });
+
+        // Get pending cash payments
+        $pendingCashPayments = $tutor->bookings()
+            ->with(['student'])
+            ->where('payment_method', 'cash')
+            ->where('payment_status', 'pending')
+            ->where('status', 'completed')
+            ->get()
+            ->map(function ($booking) {
+                return [
+                    'id' => $booking->id,
+                    'student_name' => $booking->student->full_name,
+                    'amount' => $booking->price,
+                    'date' => $booking->scheduled_at->toDateString(),
+                    'subject' => $booking->subject->name,
+                ];
+            });
+
+        // Get week schedule using the helper method
+        $weekSchedule = $this->buildWeekSchedule($tutor, $weekStart, $weekEnd);
+
+        return response()->json([
+            'stats' => $stats,
+            'tutor' => [
+                'id' => $tutor->id,
+                'bio' => $tutor->bio,
+                'hourly_rate' => $tutor->hourly_rate,
+                'subjects' => $tutor->subjects->pluck('name'),
+                'availabilities' => $tutor->availabilities()->where('is_active', true)->get(),
+                'photo' => $tutor->profile_image_url,
+                'location' => $tutor->location ? $tutor->location->city : null,
+                'experience' => $tutor->experience,
+                'education' => $tutor->education,
+            ],
+            'pending_bookings' => $pendingBookings,
+            'upcoming_bookings' => $upcomingBookings,
+            'recent_reviews' => $recentReviews,
+            'pending_cash_payments' => $pendingCashPayments,
+            'week_schedule' => $weekSchedule,
+            'subscription' => [
+                'plan' => 'free_trial', // You'll need to implement subscription logic
+                'expires_at' => null,
+            ],
+        ]);
+    }
+
+
+
+public function getWeekSchedule(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->isTutor()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $tutor = $user->tutor;
+
+        // Get week start from request or default to current week
+        $weekStart = $request->has('week_start')
+            ? Carbon::parse($request->week_start)->startOfWeek()
+            : Carbon::now()->startOfWeek();
+
+        $weekEnd = $weekStart->copy()->endOfWeek();
+
+        $schedule = $this->buildWeekSchedule($tutor, $weekStart, $weekEnd);
+
+        return response()->json([
+            'week_start' => $weekStart->toDateString(),
+            'week_end' => $weekEnd->toDateString(),
+            'schedule' => $schedule,
+        ]);
+    }
+
+    /**
+     * Helper method to build week schedule
+     * (renamed from getWeekSchedule to avoid conflict)
+     */
+    private function buildWeekSchedule($tutor, $weekStart, $weekEnd): array
+    {
+        $dayNames = ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+        $schedule = [];
+
+        for ($i = 0; $i < 7; $i++) {
+            $currentDay = $weekStart->copy()->addDays($i);
+            $dayName = $dayNames[$i];
+            $englishDayName = $currentDay->format('l'); // Monday, Tuesday, etc.
+
+            // Get bookings for this day
+            $bookings = $tutor->bookings()
+                ->with(['student', 'subject'])
+                ->whereDate('scheduled_at', $currentDay)
+                ->where('status', '!=', 'cancelled')
+                ->orderBy('scheduled_at', 'asc')
+                ->get()
+                ->map(function ($booking) {
+                    return [
+                        'id' => $booking->id,
+                        'student' => $booking->student->full_name,
+                        'subject' => $booking->subject->name,
+                        'time' => $booking->scheduled_at->format('H:i'),
+                        'duration' => $booking->duration_minutes ?? 60,
+                        'type' => $booking->lesson_type,
+                        'status' => $booking->status,
+                        'payment_method' => $booking->payment_method,
+                        'payment_status' => $booking->payment_status,
+                        'scheduled_at' => $booking->scheduled_at->toISOString(),
+                    ];
+                });
+
+            // Get available slots for this day
+            $availabilities = $tutor->availabilities()
+                ->where('day_of_week', strtolower($englishDayName))
+                ->where('is_active', true)
+                ->get();
+
+            $availableSlots = $availabilities->map(function ($availability) {
+                return $availability->start_time . ' - ' . $availability->end_time;
+            });
+
+            $schedule[] = [
+                'date' => $currentDay->toDateString(),
+                'day_name' => $dayName,
+                'bookings' => $bookings,
+                'available_slots' => $availableSlots,
+                'has_lessons' => $bookings->count() > 0,
+            ];
+        }
+
+        return $schedule;
+    }
+
+
     /**
      * Get tutor reviews
      */
