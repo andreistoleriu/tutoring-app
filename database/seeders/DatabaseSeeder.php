@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             SubjectSeeder::class,
             LocationSeeder::class,
             TutorSeeder::class,
+            StudentTestDataSeeder::class,
         ]);
     }
 }

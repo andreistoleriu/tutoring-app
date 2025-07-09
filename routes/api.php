@@ -84,9 +84,12 @@ Route::prefix('v1')->group(function () {
 
         // Student-specific routes
         Route::prefix('student')->group(function () {
-            Route::get('dashboard', [StudentController::class, 'getDashboard']);
-            Route::get('bookings', [StudentController::class, 'getBookings']);
-        });
+    Route::get('dashboard', [StudentController::class, 'getDashboard']);
+    Route::get('bookings', [StudentController::class, 'getBookings']);
+    Route::get('profile', [StudentController::class, 'getProfile']);
+    Route::post('profile', [StudentController::class, 'updateProfile']);
+    Route::put('profile', [StudentController::class, 'updateProfile']);
+});
 
         // Booking routes
         Route::prefix('bookings')->group(function () {

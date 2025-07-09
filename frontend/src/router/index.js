@@ -89,7 +89,19 @@ const router = createRouter({
       name: 'tutor-lesson',
       redirect: '/dashboard/tutor',
       beforeEnter: [requireAuth, requireTutor]
-    }
+    },
+    {
+      path: '/student/profile',
+      name: 'student-profile',
+      component: () => import('../views/student/StudentProfileView.vue'),
+      beforeEnter: [requireAuth, requireStudent]
+    },
+    {
+      path: '/student/bookings',
+      name: 'student-bookings',
+      component: () => import('../views/student/StudentBookingsView.vue'),
+      beforeEnter: [requireAuth, requireStudent]
+    },
   ],
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
