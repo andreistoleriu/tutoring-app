@@ -1,5 +1,4 @@
-// frontend/src/stores/tutor.js
-// Complete replacement to remove ALL mock data
+// Update your frontend/src/stores/tutor.js with corrected API paths
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
@@ -28,14 +27,12 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      console.log('🔄 Loading dashboard data from API...')
-      const response = await api.get('/tutor/dashboard')
+      const response = await api.get('tutor/dashboard')
       dashboard.value = response.data
-      console.log('✅ Dashboard loaded successfully')
       return response.data
     } catch (err) {
       error.value = err.response?.data?.message || 'Eroare la încărcarea dashboard-ului'
-      console.error('❌ Dashboard error:', err)
+      console.error('Dashboard error:', err)
       throw err
     } finally {
       loading.value = false
@@ -47,17 +44,14 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      console.log(`🔄 Confirming booking ${bookingId}...`)
-      const response = await api.patch(`/bookings/${bookingId}/confirm`)
-      console.log(`✅ Booking ${bookingId} confirmed successfully`)
+      const response = await api.patch(`bookings/${bookingId}/confirm`)
 
-      // Update local state - move booking from pending to upcoming
+      // Update local state
       if (dashboard.value?.pending_bookings) {
         const bookingIndex = dashboard.value.pending_bookings.findIndex(b => b.id === bookingId)
         if (bookingIndex !== -1) {
           const booking = dashboard.value.pending_bookings[bookingIndex]
           booking.status = 'confirmed'
-          booking.confirmed_at = new Date().toISOString()
 
           // Move to upcoming bookings
           dashboard.value.upcoming_bookings = dashboard.value.upcoming_bookings || []
@@ -70,7 +64,6 @@ export const useTutorStore = defineStore('tutor', () => {
 
       return response.data
     } catch (err) {
-      console.error(`❌ Error confirming booking ${bookingId}:`, err)
       error.value = err.response?.data?.message || 'Eroare la confirmarea rezervării'
       throw err
     } finally {
@@ -83,13 +76,9 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      console.log(`🔄 Rejecting booking ${bookingId}...`)
-      const response = await api.patch(`/bookings/${bookingId}/cancel`, {
-        cancellation_reason: 'Respinsă de tutor'
-      })
-      console.log(`✅ Booking ${bookingId} rejected successfully`)
+      const response = await api.patch(`bookings/${bookingId}/cancel`)
 
-      // Update local state - remove from pending bookings
+      // Update local state
       if (dashboard.value?.pending_bookings) {
         const bookingIndex = dashboard.value.pending_bookings.findIndex(b => b.id === bookingId)
         if (bookingIndex !== -1) {
@@ -99,7 +88,6 @@ export const useTutorStore = defineStore('tutor', () => {
 
       return response.data
     } catch (err) {
-      console.error(`❌ Error rejecting booking ${bookingId}:`, err)
       error.value = err.response?.data?.message || 'Eroare la respingerea rezervării'
       throw err
     } finally {
@@ -112,17 +100,18 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      console.log(`🔄 Confirming cash payment for booking ${bookingId}...`)
-      const response = await api.patch(`/bookings/${bookingId}/confirm-payment`)
-      console.log(`✅ Cash payment confirmed for booking ${bookingId}`)
+      const response = await api.patch(`bookings/${bookingId}/confirm-payment`)
 
-      // Refresh dashboard data to update pending payments
-      await getDashboard()
+      // Update local state in dashboard if booking is there
+      if (dashboard.value?.pending_cash_payments) {
+        dashboard.value.pending_cash_payments = dashboard.value.pending_cash_payments.filter(
+          payment => payment.id !== bookingId
+        )
+      }
 
       return response.data
     } catch (err) {
-      console.error(`❌ Error confirming cash payment for booking ${bookingId}:`, err)
-      error.value = err.response?.data?.message || 'Eroare la confirmarea plății'
+      error.value = err.response?.data?.message || 'Eroare la confirmarea plății cash'
       throw err
     } finally {
       loading.value = false
@@ -134,33 +123,32 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      console.log('🔄 Loading bookings from API...')
-      const response = await api.get('/bookings', { params: filters })
+      const params = {
+        ...filters,
+        per_page: filters.per_page || 15
+      }
+
+      const response = await api.get('bookings', { params })
       bookings.value = response.data.bookings
-      console.log('✅ Bookings loaded successfully')
       return response.data
     } catch (err) {
       error.value = err.response?.data?.message || 'Eroare la încărcarea rezervărilor'
-      console.error('❌ Bookings error:', err)
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  const getReviews = async () => {
+  const getProfile = async () => {
     loading.value = true
     error.value = null
 
     try {
-      console.log('🔄 Loading reviews from API...')
-      const response = await api.get('/reviews')
-      reviews.value = response.data.reviews
-      console.log('✅ Reviews loaded successfully')
+      const response = await api.get('tutor/profile')
+      profile.value = response.data.tutor || response.data
       return response.data
     } catch (err) {
-      error.value = err.response?.data?.message || 'Eroare la încărcarea recenziilor'
-      console.error('❌ Reviews error:', err)
+      error.value = err.response?.data?.message || 'Eroare la încărcarea profilului'
       throw err
     } finally {
       loading.value = false
@@ -172,39 +160,27 @@ export const useTutorStore = defineStore('tutor', () => {
     error.value = null
 
     try {
-      console.log('🔄 Updating tutor profile...')
-      const response = await api.put('/tutor/profile', profileData)
-      console.log('✅ Profile updated successfully')
+      // Determine the content type based on the data
+      const config = {}
+      if (profileData instanceof FormData) {
+        config.headers = {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+
+      const response = await api.put('tutor/profile', profileData, config)
 
       // Update local profile data
+      profile.value = response.data.tutor || response.data
+
+      // Update dashboard tutor data if available
       if (dashboard.value?.tutor) {
-        dashboard.value.tutor = { ...dashboard.value.tutor, ...profileData }
+        dashboard.value.tutor = { ...dashboard.value.tutor, ...response.data.tutor }
       }
 
       return response.data
     } catch (err) {
-      console.error('❌ Error updating profile:', err)
       error.value = err.response?.data?.message || 'Eroare la actualizarea profilului'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const updateAvailability = async (availabilityData) => {
-    loading.value = true
-    error.value = null
-
-    try {
-      console.log('🔄 Updating tutor availability...')
-      const response = await api.put('/tutor/availability', availabilityData)
-      console.log('✅ Availability updated successfully')
-
-      availability.value = response.data.availability
-      return response.data
-    } catch (err) {
-      console.error('❌ Error updating availability:', err)
-      error.value = err.response?.data?.message || 'Eroare la actualizarea disponibilității'
       throw err
     } finally {
       loading.value = false
@@ -250,9 +226,8 @@ export const useTutorStore = defineStore('tutor', () => {
     rejectBooking,
     confirmCashPayment,
     getBookings,
-    getReviews,
+    getProfile,
     updateProfile,
-    updateAvailability,
     clearError,
     $reset
   }

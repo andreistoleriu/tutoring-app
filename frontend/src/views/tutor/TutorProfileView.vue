@@ -299,11 +299,35 @@ const getInitials = () => {
 const handlePhotoUpload = (event) => {
   const file = event.target.files[0]
   if (file) {
+    // Check file size (2MB = 2 * 1024 * 1024 bytes)
     if (file.size > 2 * 1024 * 1024) {
       alert('Fișierul este prea mare. Dimensiunea maximă este 2MB.')
+      event.target.value = '' // Clear the input
       return
     }
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      alert('Tipul de fișier nu este suportat. Folosește JPEG, PNG sau GIF.')
+      event.target.value = '' // Clear the input
+      return
+    }
+
+    console.log('File selected:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    })
+
     profile.value.photo = file
+
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      profile.value.photoPreview = e.target.result
+    }
+    reader.readAsDataURL(file)
   }
 }
 
@@ -336,53 +360,58 @@ const loadLocations = async () => {
 const loadProfile = async () => {
   loading.value = true
   try {
-    console.log('🔄 Loading tutor profile from API...')
+    // Use the same API pattern
+    const response = await api.get('tutor/profile')
+    const tutorData = response.data.tutor || response.data
 
-    // Get current user data
-    const user = authStore.user
-    if (user) {
-      profile.value.firstName = user.first_name || ''
-      profile.value.lastName = user.last_name || ''
-      profile.value.email = user.email || ''
-      profile.value.phone = user.phone || ''
+    // Map API data to form data
+    profile.value = {
+      firstName: tutorData.user?.first_name || tutorData.first_name || '',
+      lastName: tutorData.user?.last_name || tutorData.last_name || '',
+      email: tutorData.user?.email || tutorData.email || '',
+      phone: tutorData.user?.phone || tutorData.phone || '',
+      bio: tutorData.bio || '',
+      experience: tutorData.experience || '',
+      education: tutorData.education || '',
+      hourlyRate: tutorData.hourly_rate || 75,
+      locationId: tutorData.location_id || '',
+      selectedSubjects: tutorData.subjects?.map(s => s.id) || [],
+      offersOnline: tutorData.offers_online ?? true,
+      offersInPerson: tutorData.offers_in_person ?? true,
+      photo: null,
+      photoPreview: tutorData.profile_image_url || null
     }
 
-    // Get tutor-specific data from dashboard (which already loads tutor info)
-    if (tutorStore.dashboard?.tutor) {
-      const tutorData = tutorStore.dashboard.tutor
-      profile.value.bio = tutorData.bio || ''
-      profile.value.experience = tutorData.experience || ''
-      profile.value.education = tutorData.education || ''
-      profile.value.hourlyRate = tutorData.hourly_rate || 50
-      profile.value.offersOnline = tutorData.offers_online !== false
-      profile.value.offersInPerson = tutorData.offers_in_person !== false
-
-      // Get selected subjects (assuming subjects is array of subject objects)
-      if (tutorData.subjects && Array.isArray(tutorData.subjects)) {
-        // If subjects come as names, we'll need to match them to IDs
-        profile.value.selectedSubjects = tutorData.subjects.map(subjectName => {
-          const subject = availableSubjects.value.find(s => s.name === subjectName)
-          return subject ? subject.id : null
-        }).filter(id => id !== null)
-      }
-
-      // Get location (assuming location comes as city name)
-      if (tutorData.location) {
-        const location = availableLocations.value.find(l => l.city === tutorData.location)
-        profile.value.locationId = location ? location.id : ''
-      }
-    }
-
-    console.log('✅ Profile loaded successfully')
+    console.log('Loaded profile data:', profile.value)
   } catch (error) {
-    console.error('❌ Error loading profile:', error)
-    alert('Eroare la încărcarea profilului.')
+    console.error('Error loading profile:', error)
+    // If loading fails, set default values
+    profile.value = {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      bio: '',
+      experience: '',
+      education: '',
+      hourlyRate: 75,
+      locationId: '',
+      selectedSubjects: [],
+      offersOnline: true,
+      offersInPerson: true,
+      photo: null,
+      photoPreview: null
+    }
   } finally {
     loading.value = false
   }
 }
 
+
 const saveProfile = async () => {
+  // Debug: Log current profile data
+  console.log('Current profile data:', profile.value)
+
   if (profile.value.selectedSubjects.length === 0) {
     alert('Te rugăm să selectezi cel puțin o materie.')
     return
@@ -393,56 +422,101 @@ const saveProfile = async () => {
     return
   }
 
+  // Additional validation
+  if (!profile.value.firstName || !profile.value.lastName) {
+    alert('Prenumele și numele de familie sunt obligatorii.')
+    return
+  }
+
+  if (!profile.value.bio || !profile.value.experience || !profile.value.education) {
+    alert('Biografia, experiența și educația sunt obligatorii.')
+    return
+  }
+
+  if (!profile.value.hourlyRate || !profile.value.locationId) {
+    alert('Tariful pe oră și locația sunt obligatorii.')
+    return
+  }
+
   saving.value = true
 
   try {
-    console.log('🔄 Saving profile...')
+    // Prepare form data for file upload
+    const formData = new FormData()
 
-    // Prepare data for API
-    const profileData = {
-      first_name: profile.value.firstName,
-      last_name: profile.value.lastName,
-      email: profile.value.email,
-      phone: profile.value.phone,
-      bio: profile.value.bio,
-      experience: profile.value.experience,
-      education: profile.value.education,
-      hourly_rate: profile.value.hourlyRate,
-      location_id: profile.value.locationId,
-      subjects: profile.value.selectedSubjects, // Array of subject IDs
-      offers_online: profile.value.offersOnline,
-      offers_in_person: profile.value.offersInPerson,
-    }
+    // Add Laravel method spoofing for PUT request
+    formData.append('_method', 'PUT')
 
-    // Include photo if uploaded
-    if (profile.value.photo) {
-      const formData = new FormData()
-      Object.keys(profileData).forEach(key => {
-        if (Array.isArray(profileData[key])) {
-          profileData[key].forEach(item => formData.append(`${key}[]`, item))
-        } else {
-          formData.append(key, profileData[key])
-        }
+    // Add basic profile data - make sure all values exist
+    formData.append('first_name', profile.value.firstName || '')
+    formData.append('last_name', profile.value.lastName || '')
+    formData.append('phone', profile.value.phone || '')
+    formData.append('bio', profile.value.bio || '')
+    formData.append('experience', profile.value.experience || '')
+    formData.append('education', profile.value.education || '')
+    formData.append('hourly_rate', profile.value.hourlyRate || 0)
+    formData.append('location_id', profile.value.locationId || '')
+
+    // Convert boolean values to proper format for Laravel
+    formData.append('offers_online', profile.value.offersOnline ? '1' : '0')
+    formData.append('offers_in_person', profile.value.offersInPerson ? '1' : '0')
+
+    // Add subjects array - make sure it's populated
+    if (profile.value.selectedSubjects && profile.value.selectedSubjects.length > 0) {
+      profile.value.selectedSubjects.forEach((subjectId, index) => {
+        formData.append(`subjects[${index}]`, subjectId)
       })
-      formData.append('photo', profile.value.photo)
-
-      // Use FormData for file upload
-      await tutorStore.updateProfile(formData)
-    } else {
-      // Regular JSON data
-      await tutorStore.updateProfile(profileData)
     }
 
-    console.log('✅ Profile saved successfully')
+    // Add photo if uploaded
+    if (profile.value.photo && profile.value.photo instanceof File) {
+      console.log('Adding profile image to form data:', {
+        name: profile.value.photo.name,
+        type: profile.value.photo.type,
+        size: profile.value.photo.size
+      })
+      formData.append('profile_image', profile.value.photo)
+    }
+
+    // Debug: Log what we're sending
+    console.log('Form data being sent:')
+    for (let [key, value] of formData.entries()) {
+      console.log(`${key}:`, value)
+    }
+
+    // Use the same API call that's working (without /api/v1 prefix)
+    const response = await api.post('tutor/profile', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    console.log('Profile update response:', response.data)
+
     alert('Profilul a fost salvat cu succes!')
     router.push({ name: 'tutor-dashboard' })
   } catch (error) {
-    console.error('❌ Error saving profile:', error)
-    alert('A apărut o eroare la salvarea profilului.')
+    console.error('Error saving profile:', error)
+
+    // Show specific validation errors if available
+    if (error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      let errorMessage = 'Erori de validare:\n'
+      Object.keys(errors).forEach(field => {
+        errorMessage += `- ${field}: ${errors[field].join(', ')}\n`
+      })
+      console.log('Validation errors:', errors)
+      alert(errorMessage)
+    } else if (error.response?.data?.message) {
+      alert(error.response.data.message)
+    } else {
+      alert('A apărut o eroare la salvarea profilului. Încearcă din nou.')
+    }
   } finally {
     saving.value = false
   }
 }
+
 
 // Lifecycle
 onMounted(async () => {

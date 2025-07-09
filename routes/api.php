@@ -80,6 +80,8 @@ Route::prefix('v1')->group(function () {
             Route::get('dashboard', [TutorController::class, 'dashboard']);
             Route::put('profile', [TutorController::class, 'updateProfile']);
             Route::put('availability', [TutorController::class, 'updateAvailability']);
+            Route::get('availability', [TutorController::class, 'getAvailability']);
+            Route::get('profile', [TutorController::class, 'getProfile']);
         });
 
         // Student-specific routes (check user type in controller)

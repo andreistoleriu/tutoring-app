@@ -287,52 +287,65 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/services/api'
 
 const router = useRouter()
 
 // Reactive data
 const currentWeekStart = ref(new Date())
 const selectedLesson = ref(null)
+const lessons = ref([])
+const loading = ref(false)
+const error = ref(null)
 
-// Sample lessons data
-const lessons = ref([
-  {
-    id: 1,
-    subject: 'Matematică',
-    student: 'Maria Popescu',
-    date: '2025-07-08',
-    time: '10:00',
-    duration: 60,
-    type: 'online',
-    status: 'confirmed',
-    price: 75,
-    notes: 'Pregătire pentru testul de săptămâna viitoare'
-  },
-  {
-    id: 2,
-    subject: 'Fizică',
-    student: 'Ion Ionescu',
-    date: '2025-07-08',
-    time: '15:00',
-    duration: 60,
-    type: 'in-person',
-    status: 'confirmed',
-    price: 80,
-    notes: 'Cinematica - probleme cu mișcarea uniformă'
-  },
-  {
-    id: 3,
-    subject: 'Chimie',
-    student: 'Ana Georgescu',
-    date: '2025-07-09',
-    time: '11:00',
-    duration: 60,
-    type: 'online',
-    status: 'pending',
-    price: 70,
-    notes: ''
+// Get current week start (Monday)
+const getCurrentWeekStart = () => {
+  const today = new Date()
+  const day = today.getDay()
+  const diff = today.getDate() - day + (day === 0 ? -6 : 1) // Adjust when day is Sunday
+  return new Date(today.setDate(diff))
+}
+
+// Load lessons for the current week
+const loadWeekLessons = async () => {
+  loading.value = true
+  error.value = null
+
+  try {
+    console.log('Loading lessons for week starting:', currentWeekStart.value)
+
+    // Calculate week range
+    const weekStart = new Date(currentWeekStart.value)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekStart.getDate() + 6)
+
+    // Format dates for API
+    const startDate = weekStart.toISOString().split('T')[0]
+    const endDate = weekEnd.toISOString().split('T')[0]
+
+    console.log('Date range:', startDate, 'to', endDate)
+
+    const response = await api.get('bookings', {
+      params: {
+        date_from: startDate,
+        date_to: endDate,
+        status: 'confirmed,pending,completed', // Get all relevant statuses
+        per_page: 50 // Get more results for the week view
+      }
+    })
+
+    console.log('Lessons response:', response.data)
+
+    lessons.value = response.data.bookings || []
+
+  } catch (err) {
+    console.error('Error loading lessons:', err)
+    error.value = 'Eroare la încărcarea lecțiilor'
+    lessons.value = []
+  } finally {
+    loading.value = false
   }
-])
+}
 
 // Computed properties
 const weekDays = computed(() => {
@@ -342,9 +355,16 @@ const weekDays = computed(() => {
   for (let i = 0; i < 7; i++) {
     const date = new Date(start)
     date.setDate(start.getDate() + i)
+
+    const dayLessons = lessons.value.filter(lesson => {
+      const lessonDate = new Date(lesson.scheduled_at).toDateString()
+      return lessonDate === date.toDateString()
+    })
+
     days.push({
       name: ['Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm', 'Dum'][i],
-      date: date.toISOString().split('T')[0]
+      date: date.toISOString().split('T')[0],
+      lessons: dayLessons.sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at))
     })
   }
 
@@ -360,81 +380,70 @@ const weekRange = computed(() => {
   const end = new Date(start)
   end.setDate(start.getDate() + 6)
 
-  return `${start.getDate()} ${getMonthName(start)} - ${end.getDate()} ${getMonthName(end)} ${end.getFullYear()}`
+  return `${formatDate(start)} - ${formatDate(end)}`
 })
 
-const todaysLessons = computed(() => {
-  const today = new Date().toISOString().split('T')[0]
-  return lessons.value
-    .filter(lesson => lesson.date === today)
-    .sort((a, b) => a.time.localeCompare(b.time))
-})
+// Navigation methods
+const previousWeek = () => {
+  const newDate = new Date(currentWeekStart.value)
+  newDate.setDate(newDate.getDate() - 7)
+  currentWeekStart.value = newDate
+  loadWeekLessons()
+}
 
-const weekStats = computed(() => {
-  return {
-    totalLessons: 5,
-    totalHours: 8,
-    totalEarnings: 375,
-    occupancyRate: 75
-  }
-})
+const nextWeek = () => {
+  const newDate = new Date(currentWeekStart.value)
+  newDate.setDate(newDate.getDate() + 7)
+  currentWeekStart.value = newDate
+  loadWeekLessons()
+}
 
-// Methods
+const goToCurrentWeek = () => {
+  currentWeekStart.value = getCurrentWeekStart()
+  loadWeekLessons()
+}
+
+// Helper functions
 const getWeekNumber = (date) => {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-  const dayNum = d.getUTCDay() || 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+  const startDate = new Date(date.getFullYear(), 0, 1)
+  const days = Math.floor((date - startDate) / (24 * 60 * 60 * 1000))
+  return Math.ceil(days / 7)
 }
 
-const getMonthName = (date) => {
-  const months = [
-    'ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie',
-    'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie'
-  ]
-  return months[date.getMonth()]
-}
-
-const isToday = (dateString) => {
-  const today = new Date().toISOString().split('T')[0]
-  return dateString === today
-}
-
-const formatDayDate = (dateString) => {
-  const date = new Date(dateString)
-  return date.getDate()
-}
-
-const formatDate = (dateString) => {
-  const date = new Date(dateString)
+const formatDate = (date) => {
   return date.toLocaleDateString('ro-RO', {
-    weekday: 'long',
-    year: 'numeric',
+    day: 'numeric',
     month: 'long',
-    day: 'numeric'
+    year: 'numeric'
   })
 }
 
-const getLessonsForDay = (dateString) => {
-  return lessons.value.filter(lesson => lesson.date === dateString)
+const formatTime = (dateTime) => {
+  if (!dateTime) return ''
+  const date = new Date(dateTime)
+  return date.toLocaleTimeString('ro-RO', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
-const getAvailableSlotsForDay = (dateString) => {
-  const date = new Date(dateString)
-  const dayOfWeek = date.getDay()
-  if (dayOfWeek === 0 || dayOfWeek === 6) return []
-  return ['09:00', '14:00', '16:00']
-}
-
-const getLessonClasses = (status) => {
-  const classes = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    confirmed: 'bg-green-100 text-green-800',
-    completed: 'bg-blue-100 text-blue-800',
-    cancelled: 'bg-red-100 text-red-800'
+const formatDuration = (minutes) => {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (hours > 0) {
+    return `${hours}h ${mins > 0 ? mins + 'm' : ''}`
   }
-  return classes[status] || 'bg-gray-100 text-gray-800'
+  return `${mins}m`
+}
+
+const getStatusColor = (status) => {
+  const colors = {
+    pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    confirmed: 'bg-green-100 text-green-800 border-green-200',
+    completed: 'bg-blue-100 text-blue-800 border-blue-200',
+    cancelled: 'bg-red-100 text-red-800 border-red-200'
+  }
+  return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200'
 }
 
 const getStatusText = (status) => {
@@ -447,23 +456,17 @@ const getStatusText = (status) => {
   return texts[status] || status
 }
 
-const isLessonStartable = (lesson) => {
-  return lesson.status === 'confirmed'
+const getLessonTypeIcon = (lessonType) => {
+  return lessonType === 'online' ? '💻' : '📍'
 }
 
-const previousWeek = () => {
-  const newDate = new Date(currentWeekStart.value)
-  newDate.setDate(newDate.getDate() - 7)
-  currentWeekStart.value = newDate
+const getInitials = (fullName) => {
+  if (!fullName) return 'N/A'
+  return fullName.split(' ').map(name => name[0]).join('').toUpperCase()
 }
 
-const nextWeek = () => {
-  const newDate = new Date(currentWeekStart.value)
-  newDate.setDate(newDate.getDate() + 7)
-  currentWeekStart.value = newDate
-}
-
-const openLessonDetails = (lesson) => {
+// Lesson actions
+const viewLessonDetails = (lesson) => {
   selectedLesson.value = lesson
 }
 
@@ -471,21 +474,42 @@ const closeLessonDetails = () => {
   selectedLesson.value = null
 }
 
-const startLesson = (lessonId) => {
-  closeLessonDetails()
-  alert(`Funcționalitatea pentru lecția ${lessonId} va fi disponibilă în curând!`)
+const confirmLesson = async (lessonId) => {
+  try {
+    await api.patch(`bookings/${lessonId}/confirm`)
+    await loadWeekLessons()
+    alert('Lecția a fost confirmată!')
+  } catch (error) {
+    console.error('Error confirming lesson:', error)
+    alert('Eroare la confirmarea lecției.')
+  }
 }
 
-// Set current week start to Monday
-const setWeekStart = (date) => {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  return new Date(d.setDate(diff))
+const completeLesson = async (lessonId) => {
+  try {
+    await api.patch(`bookings/${lessonId}/complete`)
+    await loadWeekLessons()
+    alert('Lecția a fost marcată ca finalizată!')
+  } catch (error) {
+    console.error('Error completing lesson:', error)
+    alert('Eroare la finalizarea lecției.')
+  }
+}
+
+const startLesson = (lesson) => {
+  if (lesson.lesson_type === 'online') {
+    // For online lessons, you might want to open a video call link
+    alert('Funcționalitatea pentru lecții online va fi disponibilă în curând!')
+  } else {
+    // For in-person lessons, just show details
+    viewLessonDetails(lesson)
+  }
 }
 
 // Lifecycle
 onMounted(() => {
-  currentWeekStart.value = setWeekStart(new Date())
+  console.log('TutorScheduleView mounted')
+  currentWeekStart.value = getCurrentWeekStart()
+  loadWeekLessons()
 })
 </script>
