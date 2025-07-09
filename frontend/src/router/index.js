@@ -16,6 +16,13 @@ const router = createRouter({
       component: TutorsView
     },
 
+    {
+      path: '/tutors/:id',
+      name: 'tutor-profile-public',
+      component: () => import('../views/TutorProfilePublicView.vue'),
+      props: true
+    },
+
     // Protected Student Routes
     {
       path: '/dashboard/student',

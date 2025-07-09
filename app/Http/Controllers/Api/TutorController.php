@@ -110,22 +110,79 @@ class TutorController extends Controller
     /**
      * Display the specified tutor (public endpoint)
      */
+    /**
+ * Display the specified tutor (public endpoint)
+ */
     public function show($id): JsonResponse
     {
-        $tutor = Tutor::with([
-            'user',
-            'location',
-            'subjects',
-            'reviews.student',
-            'availabilities' => function ($q) {
-                $q->where('is_active', true)->orderBy('day_of_week');
-            }
-        ])->findOrFail($id);
+    $tutor = Tutor::with([
+        'user',
+        'location',
+        'subjects',
+        'reviews.student',
+        'availabilities' => function ($q) {
+            $q->where('is_active', true)->orderBy('day_of_week');
+        }
+    ])->where('is_active', true)->findOrFail($id);
 
-        // Update last active timestamp
-        $tutor->update(['last_active' => now()]);
+    // Update last active timestamp
+    $tutor->update(['last_active' => now()]);
 
-        return response()->json(['tutor' => $tutor]);
+    // Format the response data
+    $tutorData = [
+        'id' => $tutor->id,
+        'user' => [
+            'id' => $tutor->user->id,
+            'first_name' => $tutor->user->first_name,
+            'last_name' => $tutor->user->last_name,
+            'full_name' => $tutor->user->first_name . ' ' . $tutor->user->last_name,
+        ],
+        'bio' => $tutor->bio,
+        'profile_image_url' => $tutor->profile_image_url,
+        'hourly_rate' => $tutor->hourly_rate,
+        'offers_online' => $tutor->offers_online,
+        'offers_in_person' => $tutor->offers_in_person,
+        'experience' => $tutor->experience,
+        'education' => $tutor->education,
+        'rating' => round($tutor->rating, 1),
+        'total_reviews' => $tutor->total_reviews,
+        'total_lessons' => $tutor->total_lessons,
+        'is_verified' => $tutor->is_verified,
+        'is_featured' => $tutor->is_featured,
+        'last_active' => $tutor->last_active?->diffForHumans(),
+        'location' => [
+            'id' => $tutor->location->id,
+            'city' => $tutor->location->city,
+            'county' => $tutor->location->county,
+            'full_name' => $tutor->location->city . ', ' . $tutor->location->county,
+        ],
+        'subjects' => $tutor->subjects->map(function ($subject) {
+            return [
+                'id' => $subject->id,
+                'name' => $subject->name,
+                'slug' => $subject->slug,
+                'experience_description' => $subject->pivot->experience_description,
+            ];
+        }),
+        'reviews' => $tutor->reviews->map(function ($review) {
+            return [
+                'id' => $review->id,
+                'rating' => $review->rating,
+                'comment' => $review->comment,
+                'created_at' => $review->created_at,
+                'tutor_reply' => $review->tutor_reply,
+                'tutor_replied_at' => $review->tutor_replied_at,
+                'student' => [
+                    'id' => $review->student->id,
+                    'first_name' => $review->student->first_name,
+                    'last_name' => $review->student->last_name,
+                ],
+            ];
+        }),
+        'availabilities' => $tutor->availabilities->groupBy('day_of_week'),
+    ];
+
+    return response()->json(['tutor' => $tutorData]);
     }
 
     /**

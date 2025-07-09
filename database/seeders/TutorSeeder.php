@@ -188,6 +188,7 @@ class TutorSeeder extends Seeder
                 'total_earnings' => $tutorData['total_lessons'] * $tutorData['hourly_rate'],
                 'is_verified' => $tutorData['is_verified'],
                 'is_featured' => $tutorData['is_featured'],
+                'is_active' => true,
                 'last_active' => now(),
             ]);
 

@@ -28,6 +28,7 @@ class Tutor extends Model
         'total_earnings',
         'is_verified',
         'is_featured',
+        'is_active',
         'last_active',
     ];
 
@@ -39,6 +40,7 @@ class Tutor extends Model
         'offers_in_person' => 'boolean',
         'is_verified' => 'boolean',
         'is_featured' => 'boolean',
+        'is_active' => 'boolean',
         'last_active' => 'datetime',
     ];
 

@@ -181,17 +181,36 @@ export default {
       }
     }
 
-    onMounted(async () => {
-      // Initialize auth state
-      await authStore.initAuth()
 
-      // Add click outside listener
-      document.addEventListener('click', handleClickOutside)
+  onMounted(async () => {
+    // Initialize auth state
+    await authStore.initAuth()
+
+    // Add click outside listener
+    document.addEventListener('click', handleClickOutside)
+
+    // ADD THESE: Listen for modal events from child components
+    window.addEventListener('open-login-modal', () => {
+      showLoginModal.value = true
     })
 
-    onUnmounted(() => {
-      document.removeEventListener('click', handleClickOutside)
+    window.addEventListener('open-register-modal', () => {
+      showRegisterModal.value = true
     })
+  })
+
+  onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside)
+
+    // ADD THESE: Cleanup event listeners
+    window.removeEventListener('open-login-modal', () => {
+      showLoginModal.value = true
+    })
+
+    window.removeEventListener('open-register-modal', () => {
+      showRegisterModal.value = true
+    })
+  })
 
     return {
       authStore,
