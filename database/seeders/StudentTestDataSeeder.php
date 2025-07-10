@@ -1,5 +1,7 @@
 <?php
 
+namespace Database\Seeders;
+
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Tutor;
@@ -8,6 +10,7 @@ use App\Models\Location;
 use App\Models\Booking;
 use App\Models\Review;
 use App\Models\Availability;
+use App\Models\Subscription;
 use Carbon\Carbon;
 
 class StudentTestDataSeeder extends Seeder
@@ -128,154 +131,103 @@ class StudentTestDataSeeder extends Seeder
                 $tutorSubjects = $subjects->whereIn('name', $data['subjects']);
                 foreach ($tutorSubjects as $subject) {
                     $tutor->subjects()->attach($subject->id, [
-                        'experience_description' => 'Experiență de ' . rand(3, 10) . ' ani în predarea acestei materii'
+                        'experience_description' => 'Experiență de ' . rand(3, 10) . ' ani în predarea acestei materii',
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 }
 
+                // Create subscription for tutor
+                Subscription::create([
+                    'tutor_id' => $tutorUser->id,
+                    'plan_type' => $tutor->is_featured ? 'premium' : 'basic',
+                    'price' => $tutor->is_featured ? 49.99 : 29.99,
+                    'status' => 'active',
+                    'started_at' => now()->subDays(rand(30, 365)),
+                    'expires_at' => now()->addDays(30),
+                ]);
+
                 $tutors[] = $tutor;
-            } else {
-                $tutors[] = $tutorUser->tutor;
             }
         }
 
-        // Create test bookings with various statuses and dates
-        $this->createTestBookings($student, $tutors, $subjects);
+        // Create sample bookings
+        $tutorUsers = User::where('user_type', 'tutor')->get();
+        $mathSubject = $subjects->where('name', 'Matematică')->first();
+        $englishSubject = $subjects->where('name', 'Engleză')->first();
 
-        $this->command->info('✅ Student test data created successfully!');
-        $this->command->info('📧 Student login: student@test.com / password');
-        $this->command->info('🎯 Created bookings with various statuses for realistic dashboard testing');
-    }
-
-    private function createTestBookings($student, $tutors, $subjects)
-    {
-        $bookingData = [
-            // Completed bookings (last month and this month)
-            [
-                'status' => 'completed',
-                'scheduled_at' => Carbon::now()->subDays(25),
-                'completed_at' => Carbon::now()->subDays(25)->addHours(1),
-                'payment_status' => 'paid',
-                'has_review' => true,
-                'review_rating' => 5,
-                'review_comment' => 'Lecție excelentă! Mihai explică foarte clar conceptele de matematică.'
-            ],
-            [
-                'status' => 'completed',
-                'scheduled_at' => Carbon::now()->subDays(18),
-                'completed_at' => Carbon::now()->subDays(18)->addHours(1),
-                'payment_status' => 'paid',
-                'has_review' => true,
-                'review_rating' => 4,
-                'review_comment' => 'Foarte bună lecția de engleză, am învățat multe cuvinte noi.'
-            ],
-            [
-                'status' => 'completed',
-                'scheduled_at' => Carbon::now()->subDays(12),
-                'completed_at' => Carbon::now()->subDays(12)->addHours(1),
-                'payment_status' => 'paid',
-                'has_review' => false,
-            ],
-            [
-                'status' => 'completed',
-                'scheduled_at' => Carbon::now()->subDays(8),
-                'completed_at' => Carbon::now()->subDays(8)->addHours(1),
-                'payment_status' => 'paid',
-                'has_review' => true,
-                'review_rating' => 5,
-                'review_comment' => 'Andrei m-a ajutat să înțeleg programarea orientată pe obiecte. Foarte util!'
-            ],
-            [
-                'status' => 'completed',
-                'scheduled_at' => Carbon::now()->subDays(4),
-                'completed_at' => Carbon::now()->subDays(4)->addHours(1),
-                'payment_status' => 'paid',
-                'has_review' => false,
-            ],
-            [
-                'status' => 'completed',
-                'scheduled_at' => Carbon::now()->subDays(2),
-                'completed_at' => Carbon::now()->subDays(2)->addHours(1),
-                'payment_status' => 'paid',
-                'has_review' => false,
-            ],
-
-            // Confirmed bookings (upcoming this week)
-            [
-                'status' => 'confirmed',
-                'scheduled_at' => Carbon::now()->addDays(2)->setTime(14, 0),
-                'payment_status' => 'pending',
-            ],
-            [
-                'status' => 'confirmed',
-                'scheduled_at' => Carbon::now()->addDays(4)->setTime(16, 0),
-                'payment_status' => 'pending',
-            ],
-            [
-                'status' => 'confirmed',
-                'scheduled_at' => Carbon::now()->addDays(6)->setTime(10, 0),
-                'payment_status' => 'pending',
-            ],
-
-            // Pending bookings
-            [
-                'status' => 'pending',
-                'scheduled_at' => Carbon::now()->addDays(8)->setTime(15, 0),
-                'payment_status' => 'pending',
-            ],
-            [
-                'status' => 'pending',
-                'scheduled_at' => Carbon::now()->addDays(10)->setTime(11, 0),
-                'payment_status' => 'pending',
-            ],
-
-            // One cancelled booking
-            [
-                'status' => 'cancelled',
-                'scheduled_at' => Carbon::now()->subDays(5),
-                'cancelled_at' => Carbon::now()->subDays(6),
-                'payment_status' => 'refunded',
-            ],
-        ];
-
-        foreach ($bookingData as $index => $data) {
-            $tutor = $tutors[array_rand($tutors)];
-            $subject = $subjects->random();
+        // Create some completed bookings with reviews
+        for ($i = 0; $i < 5; $i++) {
+            $tutor = $tutorUsers->random();
+            $subject = $tutor->tutor->subjects->random();
 
             $booking = Booking::create([
                 'student_id' => $student->id,
-                'tutor_id' => $tutor->user_id,
+                'tutor_id' => $tutor->id,
                 'subject_id' => $subject->id,
-                'scheduled_at' => $data['scheduled_at'],
-                'duration_minutes' => 60,
-                'lesson_type' => rand(0, 1) ? 'online' : 'in_person',
-                'price' => $tutor->hourly_rate,
-                'status' => $data['status'],
-                'payment_method' => rand(0, 1) ? 'card' : 'cash',
-                'payment_status' => $data['payment_status'],
-                'student_notes' => $index % 3 === 0 ? 'Aș vrea să ne concentrăm pe exercițiile de la examen.' : null,
-                'tutor_notes' => $data['status'] === 'completed' ? 'Student foarte aplicat, progres excelent!' : null,
-                'confirmed_at' => in_array($data['status'], ['confirmed', 'completed']) ? $data['scheduled_at']->subDays(1) : null,
-                'completed_at' => $data['completed_at'] ?? null,
-                'cancelled_at' => $data['cancelled_at'] ?? null,
-                'cancellation_reason' => $data['status'] === 'cancelled' ? 'Schimbare în program' : null,
+                'scheduled_at' => now()->subDays(rand(7, 30))->addHours(rand(9, 17)),
+                'duration_minutes' => [60, 90, 120][rand(0, 2)],
+                'lesson_type' => ['online', 'in_person'][rand(0, 1)],
+                'price' => $tutor->tutor->hourly_rate,
+                'status' => 'completed',
+                'payment_method' => ['card', 'cash'][rand(0, 1)],
+                'payment_status' => 'paid',
+                'student_notes' => 'Vreau să îmbunătățesc înțelegerea conceptelor de bază.',
+                'confirmed_at' => now()->subDays(rand(8, 31)),
+                'completed_at' => now()->subDays(rand(1, 7)),
             ]);
 
-            // Create review if specified
-            if (isset($data['has_review']) && $data['has_review']) {
-                Review::create([
-                    'booking_id' => $booking->id,
-                    'student_id' => $student->id,
-                    'tutor_id' => $tutor->user_id,
-                    'rating' => $data['review_rating'],
-                    'comment' => $data['review_comment'],
-                    'created_at' => $booking->completed_at->addMinutes(rand(30, 180)),
-                ]);
-            }
+            // Create a review for completed booking
+            Review::create([
+                'booking_id' => $booking->id,
+                'student_id' => $student->id,
+                'tutor_id' => $tutor->id,
+                'rating' => rand(4, 5),
+                'comment' => [
+                    'Profesorul a fost foarte răbdător și a explicat foarte clar.',
+                    'Lecția a fost excelentă, am înțeles mult mai bine materia.',
+                    'Recomand cu încredere acest profesor!',
+                    'Foarte profesionist și prietenos.',
+                    'Explicații clare și exerciții utile.'
+                ][rand(0, 4)],
+            ]);
         }
 
-        $this->command->info('📚 Created ' . count($bookingData) . ' test bookings');
-        $this->command->info('✅ Completed lessons: ' . collect($bookingData)->where('status', 'completed')->count());
-        $this->command->info('📅 Upcoming lessons: ' . collect($bookingData)->whereIn('status', ['confirmed', 'pending'])->count());
-        $this->command->info('⭐ Reviews created: ' . collect($bookingData)->where('has_review', true)->count());
+        // Create some upcoming bookings
+        for ($i = 0; $i < 3; $i++) {
+            $tutor = $tutorUsers->random();
+            $subject = $tutor->tutor->subjects->random();
+
+            Booking::create([
+                'student_id' => $student->id,
+                'tutor_id' => $tutor->id,
+                'subject_id' => $subject->id,
+                'scheduled_at' => now()->addDays(rand(1, 14))->addHours(rand(9, 17)),
+                'duration_minutes' => [60, 90, 120][rand(0, 2)],
+                'lesson_type' => ['online', 'in_person'][rand(0, 1)],
+                'price' => $tutor->tutor->hourly_rate,
+                'status' => ['pending', 'confirmed'][rand(0, 1)],
+                'payment_method' => ['card', 'cash'][rand(0, 1)],
+                'payment_status' => 'pending',
+                'student_notes' => 'Aștept cu nerăbdare lecția!',
+            ]);
+        }
+
+        // Update tutor ratings after creating reviews
+        foreach ($tutors as $tutor) {
+            $averageRating = $tutor->reviews()->avg('rating') ?: 0;
+            $totalReviews = $tutor->reviews()->count();
+
+            $tutor->update([
+                'rating' => round($averageRating, 2),
+                'total_reviews' => $totalReviews,
+            ]);
+        }
+
+        $this->command->info('✅ Student test data seeded successfully!');
+        $this->command->info('📧 Test accounts created:');
+        $this->command->info('   Student: student@test.com / password');
+        $this->command->info('   Tutors: tutor1@test.com, tutor2@test.com, tutor3@test.com, tutor4@test.com / password');
+        $this->command->info('📊 Created: ' . count($tutorData) . ' tutors, 8 bookings (5 completed with reviews, 3 upcoming)');
     }
 }
