@@ -29,28 +29,38 @@ export const useStudentStore = defineStore('student', () => {
     }
   }
 
-  const getBookings = async (filters = {}) => {
-    loading.value = true
-    error.value = null
 
-    try {
-      const params = new URLSearchParams()
-      Object.keys(filters).forEach(key => {
-        if (filters[key]) {
-          params.append(key, filters[key])
-        }
-      })
+const getBookings = async (filters = {}) => {
+  loading.value = true
+  error.value = null
 
-      const response = await api.get(`student/bookings?${params.toString()}`)
-      bookings.value = response.data
-      return response.data
-    } catch (err) {
-      error.value = err.response?.data?.message || 'Eroare la încărcarea rezervărilor'
-      throw err
-    } finally {
-      loading.value = false
-    }
+  try {
+    console.log('🔍 Loading bookings with filters:', filters)
+
+    const params = new URLSearchParams()
+    Object.keys(filters).forEach(key => {
+      if (filters[key]) {
+        params.append(key, filters[key])
+      }
+    })
+
+    const response = await api.get(`student/bookings?${params.toString()}`)
+
+    console.log('📋 Raw API response:', response.data)
+    console.log('📋 Bookings count:', response.data.bookings?.length || 0)
+
+    // Store the complete response data structure
+    bookings.value = response.data
+
+    return response.data
+  } catch (err) {
+    console.error('❌ Error loading bookings:', err)
+    error.value = err.response?.data?.message || 'Eroare la încărcarea rezervărilor'
+    throw err
+  } finally {
+    loading.value = false
   }
+}
 
   const getProfile = async () => {
     loading.value = true
