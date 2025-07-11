@@ -56,54 +56,179 @@ class BookingController extends Controller
     }
 
     public function store(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'tutor_id' => 'required|exists:users,id',
-            'subject_id' => 'required|exists:subjects,id',
-            'scheduled_at' => 'required|date|after:now',
-            'duration_minutes' => 'required|integer|min:30|max:180',
-            'lesson_type' => ['required', Rule::in(['online', 'in_person'])],
-            'payment_method' => ['required', Rule::in(['card', 'cash'])],
-            'student_notes' => 'nullable|string|max:500',
-        ]);
+{
+    $validated = $request->validate([
+        'tutor_id' => 'required|exists:users,id',
+        'subject_id' => 'required|exists:subjects,id',
+        'scheduled_at' => 'required|date|after:now',
+        'duration_minutes' => 'required|integer|min:30|max:180',
+        'lesson_type' => ['required', Rule::in(['online', 'in_person'])],
+        'payment_method' => ['required', Rule::in(['card', 'cash'])],
+        'student_notes' => 'nullable|string|max:500',
+    ]);
 
-        // Verify tutor exists and is active
-        $tutor = User::where('id', $validated['tutor_id'])
-            ->where('user_type', 'tutor')
-            ->where('is_active', true)
-            ->firstOrFail();
-
-        // Check if tutor teaches the subject
-        if (!$tutor->tutor->subjects()->where('subject_id', $validated['subject_id'])->exists()) {
-            return response()->json([
-                'message' => 'This tutor does not teach the selected subject.',
-            ], 422);
-        }
-
-        // Calculate price
-        $price = $tutor->tutor->hourly_rate * ($validated['duration_minutes'] / 60);
-
-        // Create booking
-        $booking = Booking::create([
-            'student_id' => $request->user()->id,
-            'tutor_id' => $validated['tutor_id'],
-            'subject_id' => $validated['subject_id'],
-            'scheduled_at' => $validated['scheduled_at'],
-            'duration_minutes' => $validated['duration_minutes'],
-            'lesson_type' => $validated['lesson_type'],
-            'price' => $price,
-            'payment_method' => $validated['payment_method'],
-            'student_notes' => $validated['student_notes'],
-        ]);
-
-        $booking->load(['student', 'tutor', 'subject']);
-
+    // Verify user is a student
+    if (!$request->user()->isStudent()) {
         return response()->json([
-            'message' => 'Booking created successfully',
-            'booking' => $booking,
-        ], 201);
+            'message' => 'Only students can create bookings.',
+        ], 403);
     }
 
+    // Verify tutor exists and is active
+    $tutor = User::where('id', $validated['tutor_id'])
+        ->where('user_type', 'tutor')
+        ->where('is_active', true)
+        ->firstOrFail();
+
+    if (!$tutor->tutor || !$tutor->tutor->is_active) {
+        return response()->json([
+            'message' => 'This tutor is not available for bookings.',
+        ], 422);
+    }
+
+    // Check if tutor teaches the subject
+    if (!$tutor->tutor->subjects()->where('subject_id', $validated['subject_id'])->exists()) {
+        return response()->json([
+            'message' => 'This tutor does not teach the selected subject.',
+        ], 422);
+    }
+
+    // Validate lesson type availability
+    if ($validated['lesson_type'] === 'online' && !$tutor->tutor->offers_online) {
+        return response()->json([
+            'message' => 'This tutor does not offer online lessons.',
+        ], 422);
+    }
+
+    if ($validated['lesson_type'] === 'in_person' && !$tutor->tutor->offers_in_person) {
+        return response()->json([
+            'message' => 'This tutor does not offer in-person lessons.',
+        ], 422);
+    }
+
+    // Validate payment method for lesson type
+    if ($validated['lesson_type'] === 'online' && $validated['payment_method'] === 'cash') {
+        return response()->json([
+            'message' => 'Cash payment is only available for in-person lessons.',
+        ], 422);
+    }
+
+    // Check for time slot availability
+    $scheduledAt = Carbon::parse($validated['scheduled_at']);
+    $endTime = $scheduledAt->copy()->addMinutes($validated['duration_minutes']);
+
+    // Strict availability validation - only allow booking during tutor's set hours
+    $dayOfWeek = strtolower($scheduledAt->format('l')); // monday, tuesday, etc.
+    $timeSlot = $scheduledAt->format('H:i');
+
+    // Check if tutor has availability for this specific time and lesson type
+    $hasAvailability = $tutor->tutor->availabilities()
+        ->where('day_of_week', $dayOfWeek)
+        ->where('is_active', true)
+        ->where('start_time', '<=', $timeSlot)
+        ->where('end_time', '>=', $endTime->format('H:i'))
+        ->where(function ($query) use ($validated) {
+            $query->where('lesson_type', $validated['lesson_type'])
+                  ->orWhere('lesson_type', 'both');
+        })
+        ->exists();
+
+    if (!$hasAvailability) {
+        return response()->json([
+            'message' => 'This time slot is not available for the selected lesson type. Please check the tutor\'s availability.',
+        ], 422);
+    }
+
+    // Check for conflicting bookings
+    $conflictingBooking = $tutor->tutorBookings()
+        ->where('status', '!=', 'cancelled')
+        ->where(function ($query) use ($scheduledAt, $endTime) {
+            $query->whereBetween('scheduled_at', [$scheduledAt, $endTime])
+                  ->orWhere(function ($q) use ($scheduledAt, $endTime) {
+                      $q->where('scheduled_at', '<', $scheduledAt)
+                        ->whereRaw('DATE_ADD(scheduled_at, INTERVAL duration_minutes MINUTE) > ?', [$scheduledAt]);
+                  });
+        })
+        ->exists();
+
+    if ($conflictingBooking) {
+        return response()->json([
+            'message' => 'This time slot is already booked. Please select another time.',
+        ], 422);
+    }
+
+    // Check for conflicting bookings
+    $conflictingBooking = $tutor->tutorBookings()
+        ->where('status', '!=', 'cancelled')
+        ->where(function ($query) use ($scheduledAt, $endTime) {
+            $query->whereBetween('scheduled_at', [$scheduledAt, $endTime])
+                  ->orWhere(function ($q) use ($scheduledAt, $endTime) {
+                      $q->where('scheduled_at', '<', $scheduledAt)
+                        ->whereRaw('DATE_ADD(scheduled_at, INTERVAL duration_minutes MINUTE) > ?', [$scheduledAt]);
+                  });
+        })
+        ->exists();
+
+    if ($conflictingBooking) {
+        return response()->json([
+            'message' => 'This time slot is already booked.',
+        ], 422);
+    }
+
+    // Calculate price
+    $price = $tutor->tutor->hourly_rate * ($validated['duration_minutes'] / 60);
+
+    // Create booking
+    $booking = Booking::create([
+        'student_id' => $request->user()->id,
+        'tutor_id' => $validated['tutor_id'],
+        'subject_id' => $validated['subject_id'],
+        'scheduled_at' => $validated['scheduled_at'],
+        'duration_minutes' => $validated['duration_minutes'],
+        'lesson_type' => $validated['lesson_type'],
+        'price' => $price,
+        'payment_method' => $validated['payment_method'],
+        'student_notes' => $validated['student_notes'],
+        'status' => 'pending',
+        'payment_status' => 'pending',
+    ]);
+
+    $booking->load(['student', 'tutor', 'subject']);
+
+    // TODO: Send notification to tutor (implement later)
+    // event(new BookingCreated($booking));
+
+    return response()->json([
+        'message' => 'Booking created successfully',
+        'booking' => [
+            'id' => $booking->id,
+            'student' => [
+                'id' => $booking->student->id,
+                'first_name' => $booking->student->first_name,
+                'last_name' => $booking->student->last_name,
+                'email' => $booking->student->email,
+            ],
+            'tutor' => [
+                'id' => $booking->tutor->id,
+                'first_name' => $booking->tutor->first_name,
+                'last_name' => $booking->tutor->last_name,
+            ],
+            'subject' => [
+                'id' => $booking->subject->id,
+                'name' => $booking->subject->name,
+            ],
+            'scheduled_at' => $booking->scheduled_at->toISOString(),
+            'duration_minutes' => $booking->duration_minutes,
+            'lesson_type' => $booking->lesson_type,
+            'price' => $booking->price,
+            'status' => $booking->status,
+            'payment_method' => $booking->payment_method,
+            'payment_status' => $booking->payment_status,
+            'student_notes' => $booking->student_notes,
+            'created_at' => $booking->created_at->toISOString(),
+        ],
+    ], 201);
+}
     public function show(Request $request, $id): JsonResponse
     {
         $user = $request->user();

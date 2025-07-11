@@ -108,82 +108,142 @@ class TutorController extends Controller
     }
 
     /**
-     * Display the specified tutor (public endpoint)
-     */
-    /**
  * Display the specified tutor (public endpoint)
  */
-    public function show($id): JsonResponse
-    {
-    $tutor = Tutor::with([
-        'user',
-        'location',
-        'subjects',
-        'reviews.student',
-        'availabilities' => function ($q) {
-            $q->where('is_active', true)->orderBy('day_of_week');
+/**
+ * Display the specified tutor (public endpoint)
+ */
+public function show($id): JsonResponse
+{
+    try {
+        // Debug: Log the incoming ID
+        \Log::info('Fetching tutor with ID: ' . $id);
+
+        // First, let's check if we're looking for tutor by user_id or tutor.id
+        // The route parameter might be the user ID, not the tutor table ID
+
+        $tutor = Tutor::with([
+            'user',
+            'location',
+            'subjects',
+            'reviews.student',
+            'availabilities' => function ($q) {
+                $q->where('is_active', true)->orderBy('day_of_week');
+            }
+        ])
+        ->where('user_id', $id) // Try user_id first
+        ->where('is_active', true)
+        ->first();
+
+        // If not found by user_id, try by tutor.id
+        if (!$tutor) {
+            $tutor = Tutor::with([
+                'user',
+                'location',
+                'subjects',
+                'reviews.student',
+                'availabilities' => function ($q) {
+                    $q->where('is_active', true)->orderBy('day_of_week');
+                }
+            ])
+            ->where('id', $id)
+            ->where('is_active', true)
+            ->first();
         }
-    ])->where('is_active', true)->findOrFail($id);
 
-    // Update last active timestamp
-    $tutor->update(['last_active' => now()]);
+        if (!$tutor) {
+            \Log::warning('Tutor not found with ID: ' . $id);
+            return response()->json([
+                'message' => 'Tutor not found'
+            ], 404);
+        }
 
-    // Format the response data
-    $tutorData = [
-        'id' => $tutor->id,
-        'user' => [
-            'id' => $tutor->user->id,
-            'first_name' => $tutor->user->first_name,
-            'last_name' => $tutor->user->last_name,
-            'full_name' => $tutor->user->first_name . ' ' . $tutor->user->last_name,
-        ],
-        'bio' => $tutor->bio,
-        'profile_image_url' => $tutor->profile_image_url,
-        'hourly_rate' => $tutor->hourly_rate,
-        'offers_online' => $tutor->offers_online,
-        'offers_in_person' => $tutor->offers_in_person,
-        'experience' => $tutor->experience,
-        'education' => $tutor->education,
-        'rating' => round($tutor->rating, 1),
-        'total_reviews' => $tutor->total_reviews,
-        'total_lessons' => $tutor->total_lessons,
-        'is_verified' => $tutor->is_verified,
-        'is_featured' => $tutor->is_featured,
-        'last_active' => $tutor->last_active?->diffForHumans(),
-        'location' => [
-            'id' => $tutor->location->id,
-            'city' => $tutor->location->city,
-            'county' => $tutor->location->county,
-            'full_name' => $tutor->location->city . ', ' . $tutor->location->county,
-        ],
-        'subjects' => $tutor->subjects->map(function ($subject) {
-            return [
-                'id' => $subject->id,
-                'name' => $subject->name,
-                'slug' => $subject->slug,
-                'experience_description' => $subject->pivot->experience_description,
-            ];
-        }),
-        'reviews' => $tutor->reviews->map(function ($review) {
-            return [
-                'id' => $review->id,
-                'rating' => $review->rating,
-                'comment' => $review->comment,
-                'created_at' => $review->created_at,
-                'tutor_reply' => $review->tutor_reply,
-                'tutor_replied_at' => $review->tutor_replied_at,
-                'student' => [
-                    'id' => $review->student->id,
-                    'first_name' => $review->student->first_name,
-                    'last_name' => $review->student->last_name,
-                ],
-            ];
-        }),
-        'availabilities' => $tutor->availabilities->groupBy('day_of_week'),
-    ];
+        // Debug: Log successful find
+        \Log::info('Tutor found: ' . $tutor->user->first_name . ' ' . $tutor->user->last_name);
 
-    return response()->json(['tutor' => $tutorData]);
+        // Update last active timestamp
+        $tutor->update(['last_active' => now()]);
+
+        // Format the response data safely
+        $tutorData = [
+            'id' => $tutor->id,
+            'user_id' => $tutor->user_id, // Add this for booking
+            'user' => [
+                'id' => $tutor->user->id,
+                'first_name' => $tutor->user->first_name,
+                'last_name' => $tutor->user->last_name,
+                'full_name' => $tutor->user->first_name . ' ' . $tutor->user->last_name,
+            ],
+            'bio' => $tutor->bio,
+            'profile_image_url' => $tutor->profile_image_url,
+            'hourly_rate' => (float) $tutor->hourly_rate,
+            'offers_online' => (bool) $tutor->offers_online,
+            'offers_in_person' => (bool) $tutor->offers_in_person,
+            'experience' => $tutor->experience,
+            'education' => $tutor->education,
+            'rating' => round((float) $tutor->rating, 1),
+            'total_reviews' => (int) $tutor->total_reviews,
+            'total_lessons' => (int) $tutor->total_lessons,
+            'is_verified' => (bool) $tutor->is_verified,
+            'is_featured' => (bool) $tutor->is_featured,
+            'last_active' => $tutor->last_active?->diffForHumans(),
+            'location' => $tutor->location ? [
+                'id' => $tutor->location->id,
+                'city' => $tutor->location->city,
+                'county' => $tutor->location->county,
+                'full_name' => $tutor->location->city . ', ' . $tutor->location->county,
+            ] : null,
+            'subjects' => $tutor->subjects->map(function ($subject) {
+                return [
+                    'id' => $subject->id,
+                    'name' => $subject->name,
+                    'slug' => $subject->slug,
+                    'description' => $subject->description,
+                    'pivot' => [
+                        'experience_description' => $subject->pivot->experience_description ?? null,
+                    ],
+                ];
+            }),
+            'reviews' => $tutor->reviews->map(function ($review) {
+                return [
+                    'id' => $review->id,
+                    'rating' => (int) $review->rating,
+                    'comment' => $review->comment,
+                    'tutor_reply' => $review->tutor_reply,
+                    'student' => [
+                        'id' => $review->student->id,
+                        'first_name' => $review->student->first_name,
+                        'last_name' => $review->student->last_name,
+                    ],
+                    'created_at' => $review->created_at->toISOString(),
+                ];
+            }),
+            'availabilities' => $tutor->availabilities->map(function ($availability) {
+                return [
+                    'id' => $availability->id,
+                    'day_of_week' => $availability->day_of_week,
+                    'start_time' => $availability->start_time,
+                    'end_time' => $availability->end_time,
+                    'lesson_type' => $availability->lesson_type,
+                    'is_active' => (bool) $availability->is_active,
+                ];
+            }),
+        ];
+
+        return response()->json([
+            'tutor' => $tutorData
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error fetching tutor: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+
+        return response()->json([
+            'message' => 'Error loading tutor profile',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * Get tutor dashboard data
@@ -886,6 +946,123 @@ public function getWeekSchedule(Request $request): JsonResponse
                 ],
             ]);
     }
+
+   /**
+ * Get public tutor availability (for students to view when booking)
+ */
+public function getPublicAvailability(Request $request, $id): JsonResponse
+{
+    try {
+        // Find tutor by user_id first, then by tutor.id
+        $tutor = Tutor::where('user_id', $id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$tutor) {
+            $tutor = Tutor::where('id', $id)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        if (!$tutor) {
+            return response()->json([
+                'message' => 'Tutor not found or inactive'
+            ], 404);
+        }
+
+        $availability = $tutor->availabilities()
+            ->where('is_active', true)
+            ->orderByRaw("FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')")
+            ->orderBy('start_time')
+            ->get();
+
+        // Group by day of week
+        $groupedAvailability = $availability->groupBy('day_of_week');
+
+        // Convert to format expected by frontend
+        $formattedAvailability = [];
+        foreach ($groupedAvailability as $dayName => $slots) {
+            $formattedAvailability[$dayName] = $slots->map(function ($slot) {
+                return [
+                    'start_time' => $slot->start_time,
+                    'end_time' => $slot->end_time,
+                    'lesson_type' => $slot->lesson_type,
+                ];
+            })->toArray();
+        }
+
+        return response()->json([
+            'availability' => $formattedAvailability
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error in getPublicAvailability:', [
+            'tutor_id' => $id,
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'message' => 'Error loading availability',
+            'availability' => []
+        ], 500);
+    }
+}
+
+/**
+ * Get tutor's booked time slots for the next 14 days
+ */
+public function getBusySlots(Request $request, $id): JsonResponse
+{
+    try {
+        $tutor = Tutor::where('user_id', $id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$tutor) {
+            $tutor = Tutor::where('id', $id)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        if (!$tutor) {
+            return response()->json([
+                'message' => 'Tutor not found'
+            ], 404);
+        }
+
+        $startDate = Carbon::now()->startOfDay();
+        $endDate = Carbon::now()->addDays(14)->endOfDay();
+
+        $busySlots = $tutor->user->tutorBookings()
+            ->whereBetween('scheduled_at', [$startDate, $endDate])
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->select('scheduled_at', 'duration_minutes')
+            ->get()
+            ->map(function ($booking) {
+                $start = $booking->scheduled_at;
+                $end = $start->copy()->addMinutes($booking->duration_minutes);
+
+                return [
+                    'start' => $start->toISOString(),
+                    'end' => $end->toISOString(),
+                ];
+            });
+
+        return response()->json([
+            'busy_slots' => $busySlots
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error in getBusySlots:', [
+            'tutor_id' => $id,
+            'error' => $e->getMessage()
+        ]);
+
+        return response()->json([
+            'busy_slots' => []
+        ], 500);
+    }
+}
 
     /**
      * Get tutor earnings and statistics

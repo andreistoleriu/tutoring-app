@@ -222,7 +222,7 @@
             v-for="tutor in tutors"
             :key="tutor.id"
             class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-lg border border-gray-200/50 hover:shadow-2xl hover:border-blue-200 transition-all duration-500 group cursor-pointer overflow-hidden"
-            @click="viewTutor(tutor.id)"
+            @click="viewTutor(tutor)"
           >
             <!-- Tutor Card Content -->
             <div class="p-8">
@@ -528,11 +528,19 @@ export default {
       searchTutors()
     }
 
-    const viewTutor = (tutorId) => {
-      if (!loading.value && tutorId) {
-        router.push({ name: 'tutor-profile-public', params: { id: tutorId } })
-      }
+    const viewTutor = (tutor) => {
+  if (!loading.value && tutor) {
+    // Use the user ID for routing (this should match what the API expects)
+    const userId = tutor.user?.id || tutor.user_id
+
+    if (userId) {
+      console.log('Navigating to tutor with user ID:', userId, 'for tutor:', tutor.user?.first_name)
+      router.push({ name: 'tutor-profile-public', params: { id: userId } })
+    } else {
+      console.error('No valid user ID found for tutor:', tutor)
     }
+  }
+}
 
     // Watch for route changes
     watch(() => route.query, (newQuery, oldQuery) => {

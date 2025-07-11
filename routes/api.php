@@ -41,6 +41,8 @@ Route::prefix('v1')->group(function () {
     Route::prefix('tutors')->group(function () {
         Route::get('/', [TutorController::class, 'index']);
         Route::get('{id}', [TutorController::class, 'show']);
+        Route::get('{id}/availability', [TutorController::class, 'getPublicAvailability']);
+        Route::get('{id}/busy-slots', [TutorController::class, 'getBusySlots']);
     });
 
     // Public data routes
