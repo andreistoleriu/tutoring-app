@@ -98,6 +98,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/', [BookingController::class, 'store']);
             Route::get('{id}', [BookingController::class, 'show']);
             Route::patch('{id}/confirm', [BookingController::class, 'confirm']);
+            Route::put('{id}', [BookingController::class, 'update']);
             Route::patch('{id}/reject', [BookingController::class, 'reject']);
             Route::patch('{id}/complete', [BookingController::class, 'complete']);
             Route::patch('{id}/cancel', [BookingController::class, 'cancel']);

@@ -346,4 +346,88 @@ class BookingController extends Controller
             'booking' => $booking,
         ]);
     }
+
+    public function update(Request $request, $id): JsonResponse
+{
+    $user = $request->user();
+
+    // Find booking that belongs to the student
+    $booking = Booking::where('student_id', $user->id)
+        ->findOrFail($id);
+
+    if (!$booking->canBeEdited()) {
+        return response()->json([
+            'message' => 'Booking cannot be edited. Editing is only allowed for pending bookings until 24 hours before the lesson.',
+        ], 422);
+    }
+
+    $validated = $request->validate([
+        'scheduled_at' => 'required|date|after:now',
+        'duration_minutes' => 'sometimes|integer|in:30,60,90,120',
+        'lesson_type' => 'sometimes|in:online,in_person',
+        'payment_method' => 'sometimes|in:card,cash',
+        'student_notes' => 'nullable|string|max:1000',
+    ]);
+
+    // Check if tutor still offers the requested lesson type
+    $tutor = $booking->tutor->tutor;
+    if (isset($validated['lesson_type'])) {
+        if ($validated['lesson_type'] === 'online' && !$tutor->offers_online) {
+            return response()->json([
+                'message' => 'Tutor no longer offers online lessons.',
+            ], 422);
+        }
+        if ($validated['lesson_type'] === 'in_person' && !$tutor->offers_in_person) {
+            return response()->json([
+                'message' => 'Tutor no longer offers in-person lessons.',
+            ], 422);
+        }
+    }
+
+    // Check for time conflicts if schedule is changed
+    if (isset($validated['scheduled_at'])) {
+        $scheduledAt = Carbon::parse($validated['scheduled_at']);
+        $duration = $validated['duration_minutes'] ?? $booking->duration_minutes;
+        $endTime = $scheduledAt->copy()->addMinutes($duration);
+
+        // Check for conflicting bookings (excluding current booking)
+        $conflictingBooking = $booking->tutor->tutorBookings()
+            ->where('id', '!=', $booking->id)
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($query) use ($scheduledAt, $endTime) {
+                $query->whereBetween('scheduled_at', [$scheduledAt, $endTime])
+                      ->orWhere(function ($q) use ($scheduledAt, $endTime) {
+                          $q->where('scheduled_at', '<', $scheduledAt)
+                            ->whereRaw('DATE_ADD(scheduled_at, INTERVAL duration_minutes MINUTE) > ?', [$scheduledAt]);
+                      });
+            })
+            ->exists();
+
+        if ($conflictingBooking) {
+            return response()->json([
+                'message' => 'This time slot is already booked. Please select another time.',
+            ], 422);
+        }
+    }
+
+    // Calculate new price if duration or lesson type changed
+    $price = $booking->price;
+    if (isset($validated['duration_minutes']) || isset($validated['lesson_type'])) {
+        $duration = $validated['duration_minutes'] ?? $booking->duration_minutes;
+        $price = ($duration / 60) * $tutor->hourly_rate;
+    }
+
+    // Update booking
+    $booking->update([
+        ...$validated,
+        'price' => $price,
+    ]);
+
+    $booking->load(['student', 'tutor', 'subject']);
+
+    return response()->json([
+        'message' => 'Booking updated successfully',
+        'booking' => $booking,
+    ]);
+}
 }

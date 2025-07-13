@@ -241,6 +241,15 @@
                 </div>
 
                 <div class="flex items-center space-x-2">
+
+                                  <button
+  v-if="canEditBooking(booking)"
+  @click="openEditModal(booking)"
+  class="flex-1 px-3 sm:px-4 py-2 bg-blue-600 text-white text-xs sm:text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+>
+  Editează
+</button>
+
                   <!-- Cancel Booking -->
                   <button
                     v-if="booking.status === 'pending' || booking.status === 'confirmed'"
@@ -381,12 +390,24 @@
       </form>
     </div>
   </div>
+
+
+  <!-- Edit Booking Modal -->
+<EditBookingModal
+  :is-open="showEditModal"
+  :booking="selectedBookingForEdit"
+  @close="closeEditModal"
+  @success="handleEditSuccess"
+/>
+
+
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useStudentStore } from '@/stores/student'
+import EditBookingModal from '@/components/EditBookingModal.vue'
 
 // Composables
 const route = useRoute()
@@ -400,6 +421,8 @@ const bookings = ref(null)
 const showReviewModal = ref(false)
 const selectedBooking = ref(null)
 const submittingReview = ref(false)
+const showEditModal = ref(false)
+const selectedBookingForEdit = ref(null)
 
 // Filters
 const filters = reactive({
@@ -430,6 +453,23 @@ const hasBookings = computed(() => {
   console.log('📊 Has bookings computed:', count > 0, 'count:', count)
   return count > 0
 })
+
+const openEditModal = (booking) => {
+  selectedBookingForEdit.value = booking
+  showEditModal.value = true
+}
+
+const closeEditModal = () => {
+  showEditModal.value = false
+  selectedBookingForEdit.value = null
+}
+
+const handleEditSuccess = (updatedBooking) => {
+  // Reload bookings to get fresh data
+  loadBookings()
+  closeEditModal()
+  alert('Rezervarea a fost actualizată cu succes!')
+}
 
 const hasActiveFilters = computed(() => {
   return filters.status || filters.date_from || filters.date_to
@@ -530,6 +570,16 @@ const getInitials = (firstName, lastName) => {
   const first = firstName ? firstName.charAt(0).toUpperCase() : ''
   const last = lastName ? lastName.charAt(0).toUpperCase() : ''
   return first + last || first || last
+}
+
+const canEditBooking = (booking) => {
+  if (booking.status !== 'pending') return false
+
+  const scheduledAt = new Date(booking.scheduled_at)
+  const now = new Date()
+  const hoursUntilLesson = (scheduledAt - now) / (1000 * 60 * 60)
+
+  return hoursUntilLesson > 24
 }
 
 const formatDate = (dateString) => {

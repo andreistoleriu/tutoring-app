@@ -215,6 +215,39 @@ const getBookings = async (filters = {}) => {
     }
   }
 
+const updateBooking = async (bookingId, updateData) => {
+  loading.value = true
+  error.value = null
+
+  try {
+    console.log('🔄 Updating booking with data:', updateData)
+    const response = await api.put(`bookings/${bookingId}`, updateData)
+    console.log('✅ Update response:', response.data)
+
+    // Update local state
+    if (dashboard.value?.upcoming_bookings) {
+      const bookingIndex = dashboard.value.upcoming_bookings.findIndex(b => b.id === bookingId)
+      if (bookingIndex !== -1) {
+        dashboard.value.upcoming_bookings[bookingIndex] = response.data.booking
+      }
+    }
+
+    if (bookings.value?.data) {
+      const bookingIndex = bookings.value.data.findIndex(b => b.id === bookingId)
+      if (bookingIndex !== -1) {
+        bookings.value.data[bookingIndex] = response.data.booking
+      }
+    }
+
+    return response.data
+  } catch (err) {
+    console.error('❌ Error updating booking:', err)
+    error.value = err.response?.data?.message || 'Eroare la actualizarea rezervării'
+    throw err
+  } finally {
+    loading.value = false
+  }
+}
   // Reset store
   const $reset = () => {
     dashboard.value = null
@@ -240,6 +273,7 @@ const getBookings = async (filters = {}) => {
     createBooking,
     getBooking,
     cancelBooking,
+    updateBooking,
     submitReview,
     getTutorAvailability,
     getTutorBusySlots,

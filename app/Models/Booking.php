@@ -85,6 +85,12 @@ class Booking extends Model
                $this->scheduled_at->diffInHours(now()) > 24;
     }
 
+    public function canBeEdited(): bool
+{
+    return $this->status === 'pending' &&
+           $this->scheduled_at->diffInHours(now()) > 24;
+}
+
     public function canBeConfirmed(): bool
     {
         return $this->status === 'pending';
