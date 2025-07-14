@@ -23,7 +23,8 @@
             <p><span class="font-medium">Materie:</span> {{ booking.subject?.name }}</p>
             <p><span class="font-medium">Data:</span> {{ formatDateTime(booking.scheduled_at) }}</p>
             <p><span class="font-medium">Durată:</span> {{ booking.duration_minutes }} min</p>
-            <p><span class="font-medium">Tip:</span> {{ booking.lesson_type === 'online' ? 'Online' : 'Față în față' }}</p>
+            <p><span class="font-medium">Tip:</span> {{ booking.lesson_type === 'online' ? 'Online' : 'Față în față' }}
+            </p>
             <p><span class="font-medium">Preț:</span> {{ booking.price }} RON</p>
           </div>
         </div>
@@ -40,18 +41,13 @@
             </div>
 
             <div v-if="availableSubjects.length > 0" class="grid grid-cols-1 gap-2">
-              <button
-                v-for="subject in availableSubjects"
-                :key="subject.id"
-                type="button"
-                @click="selectSubject(subject.id)"
-                :class="[
+              <button v-for="subject in availableSubjects" :key="subject.id" type="button"
+                @click="selectSubject(subject.id)" :class="[
                   'p-3 text-left rounded-lg border-2 transition-all',
-                  editData.subject_id === subject.id
+                  editData.subject_id == subject.id    // MAKE SURE THIS COMPARISON IS CORRECT
                     ? 'border-indigo-500 bg-indigo-50 text-indigo-900'
                     : 'border-gray-200 hover:border-gray-300'
-                ]"
-              >
+                ]">
                 <div class="font-medium text-sm">{{ subject.name }}</div>
                 <div v-if="subject.description" class="text-xs text-gray-600 mt-1">{{ subject.description }}</div>
               </button>
@@ -60,10 +56,7 @@
             <!-- Fallback if no subjects loaded -->
             <div v-else class="text-sm text-gray-500 bg-gray-50 p-3 rounded-lg">
               Nu s-au putut încărca materiile. Se folosesc valorile implicite...
-              <button
-                @click="loadTutorSubjects()"
-                class="ml-2 text-blue-600 hover:text-blue-800 underline"
-              >
+              <button @click="loadTutorSubjects()" class="ml-2 text-blue-600 hover:text-blue-800 underline">
                 Încearcă din nou
               </button>
             </div>
@@ -73,30 +66,22 @@
           <div class="space-y-3">
             <label class="block text-sm font-semibold text-gray-900">Tip lecție *</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                @click="selectLessonType('online')"
-                :class="[
-                  'p-3 sm:p-4 rounded-xl border-2 transition-all text-left',
-                  editData.lesson_type === 'online'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                ]"
-              >
+              <button type="button" @click="selectLessonType('online')" :class="[
+                'p-3 sm:p-4 rounded-xl border-2 transition-all text-left',
+                editData.lesson_type === 'online'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              ]">
                 <div class="font-medium text-sm sm:text-base">Online</div>
                 <div class="text-xs text-gray-600">Video call</div>
               </button>
 
-              <button
-                type="button"
-                @click="selectLessonType('in_person')"
-                :class="[
-                  'p-3 sm:p-4 rounded-xl border-2 transition-all text-left',
-                  editData.lesson_type === 'in_person'
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                ]"
-              >
+              <button type="button" @click="selectLessonType('in_person')" :class="[
+                'p-3 sm:p-4 rounded-xl border-2 transition-all text-left',
+                editData.lesson_type === 'in_person'
+                  ? 'border-purple-500 bg-purple-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              ]">
                 <div class="font-medium text-sm sm:text-base">Față în față</div>
                 <div class="text-xs text-gray-600">La domiciliu</div>
               </button>
@@ -107,18 +92,13 @@
           <div class="space-y-3">
             <label class="block text-sm font-semibold text-gray-900">Durată *</label>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-              <button
-                v-for="duration in durationOptions"
-                :key="duration.value"
-                type="button"
-                @click="editData.duration_minutes = duration.value"
-                :class="[
+              <button v-for="duration in durationOptions" :key="duration.value" type="button"
+                @click="editData.duration_minutes = duration.value" :class="[
                   'p-2 sm:p-3 text-center rounded-lg border-2 transition-all',
                   editData.duration_minutes === duration.value
                     ? 'border-blue-500 bg-blue-50 text-blue-900'
                     : 'border-gray-200 hover:border-gray-300'
-                ]"
-              >
+                ]">
                 <div class="font-medium text-xs sm:text-sm">{{ duration.label }}</div>
                 <div class="text-xs text-gray-600">{{ calculatePrice(duration.value) }} RON</div>
               </button>
@@ -138,21 +118,15 @@
               <div>D</div>
             </div>
             <div class="grid grid-cols-7 gap-1">
-              <button
-                v-for="date in availableDates"
-                :key="date.dateString"
-                type="button"
-                @click="selectDate(date)"
-                :disabled="!date.hasSlots"
-                :class="[
+              <button v-for="date in availableDates" :key="date.dateString" type="button" @click="selectDate(date)"
+                :disabled="!date.hasSlots" :class="[
                   'aspect-square rounded-lg text-sm font-medium transition-all',
                   selectedDate === date.dateString
                     ? 'bg-blue-600 text-white'
                     : date.hasSlots
                       ? 'bg-white border border-gray-200 text-gray-900 hover:border-blue-300'
                       : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-                ]"
-              >
+                ]">
                 {{ date.day }}
               </button>
             </div>
@@ -164,18 +138,13 @@
 
             <!-- Show available time slots if they exist -->
             <div v-if="availableTimeSlots.length > 0" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              <button
-                v-for="slot in availableTimeSlots"
-                :key="slot.time"
-                type="button"
-                @click="editData.scheduled_at = slot.datetime"
-                :class="[
+              <button v-for="slot in availableTimeSlots" :key="slot.time" type="button"
+                @click="editData.scheduled_at = slot.datetime" :class="[
                   'p-3 text-center rounded-lg border-2 transition-all',
                   editData.scheduled_at === slot.datetime
                     ? 'border-blue-500 bg-blue-50 text-blue-900'
                     : 'border-gray-200 hover:border-gray-300'
-                ]"
-              >
+                ]">
                 <div class="font-medium">{{ slot.time }}</div>
                 <div class="text-xs text-gray-600">{{ slot.type }}</div>
               </button>
@@ -185,8 +154,11 @@
             <div v-else class="space-y-3">
               <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
                 <div class="flex items-start space-x-3">
-                  <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                  <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z">
+                    </path>
                   </svg>
                   <div>
                     <h4 class="text-sm font-medium text-yellow-800 mb-1">Nu sunt ore disponibile</h4>
@@ -204,30 +176,22 @@
           <div class="space-y-3">
             <label class="block text-sm font-semibold text-gray-900">Metoda de plată</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                @click="editData.payment_method = 'card'"
-                :class="[
-                  'p-3 sm:p-4 rounded-xl border-2 transition-all text-left',
-                  editData.payment_method === 'card'
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                ]"
-              >
+              <button type="button" @click="editData.payment_method = 'card'" :class="[
+                'p-3 sm:p-4 rounded-xl border-2 transition-all text-left',
+                editData.payment_method === 'card'
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              ]">
                 <div class="font-medium text-sm sm:text-base">Card</div>
                 <div class="text-xs text-gray-600">Plată online</div>
               </button>
 
-              <button
-                type="button"
-                @click="editData.payment_method = 'cash'"
-                :class="[
-                  'p-3 sm:p-4 rounded-xl border-2 transition-all text-left',
-                  editData.payment_method === 'cash'
-                    ? 'border-orange-500 bg-orange-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                ]"
-              >
+              <button type="button" @click="editData.payment_method = 'cash'" :class="[
+                'p-3 sm:p-4 rounded-xl border-2 transition-all text-left',
+                editData.payment_method === 'cash'
+                  ? 'border-orange-500 bg-orange-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              ]">
                 <div class="font-medium text-sm sm:text-base">Cash</div>
                 <div class="text-xs text-gray-600">Plată la lecție</div>
               </button>
@@ -237,13 +201,8 @@
           <!-- Notes -->
           <div class="space-y-3">
             <label for="notes" class="block text-sm font-semibold text-gray-900">Note pentru profesor</label>
-            <textarea
-              id="notes"
-              v-model="editData.student_notes"
-              rows="3"
-              placeholder="Adaugă detalii suplimentare..."
-              class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm sm:text-base"
-            ></textarea>
+            <textarea id="notes" v-model="editData.student_notes" rows="3" placeholder="Adaugă detalii suplimentare..."
+              class="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm sm:text-base"></textarea>
           </div>
 
           <!-- Summary -->
@@ -277,23 +236,16 @@
 
           <!-- Actions -->
           <div class="flex flex-col gap-3">
-            <button
-              type="submit"
-              :disabled="!isFormValid || submitting"
-              :class="[
-                'w-full py-3 rounded-xl font-medium transition-all text-sm sm:text-base',
-                isFormValid && !submitting
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              ]"
-            >
+            <button type="submit" :disabled="!isFormValid || submitting" :class="[
+              'w-full py-3 rounded-xl font-medium transition-all text-sm sm:text-base',
+              isFormValid && !submitting
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            ]">
               {{ submitting ? 'Se actualizează...' : 'Salvează modificările' }}
             </button>
-            <button
-              type="button"
-              @click="close"
-              class="w-full py-3 border-2 border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base"
-            >
+            <button type="button" @click="close"
+              class="w-full py-3 border-2 border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-colors text-sm sm:text-base">
               Anulează
             </button>
           </div>
@@ -354,8 +306,8 @@ const editData = ref({
 const tutor = computed(() => {
   // Handle different possible tutor object structures
   return props.booking.tutor?.tutor ||
-         props.booking.tutor ||
-         { offers_online: true, offers_in_person: true, hourly_rate: 75 }
+    props.booking.tutor ||
+    { offers_online: true, offers_in_person: true, hourly_rate: 75 }
 })
 
 const availableDates = computed(() => {
@@ -423,7 +375,7 @@ const availableTimeSlots = computed(() => {
 
     // Check if this availability matches the selected lesson type
     const lessonTypeMatches = availability.lesson_type === 'both' ||
-                             availability.lesson_type === editData.value.lesson_type
+      availability.lesson_type === editData.value.lesson_type
 
     console.log('Lesson type match check:', {
       availabilityType: availability.lesson_type,
@@ -535,12 +487,24 @@ const priceChanged = computed(() => newPrice.value !== props.booking.price)
 const priceChange = computed(() => newPrice.value - props.booking.price)
 
 const isFormValid = computed(() => {
-  return editData.value.subject_id &&
-         editData.value.lesson_type &&
-         editData.value.duration_minutes &&
-         editData.value.scheduled_at &&
-         editData.value.payment_method &&
-         hasAnyChanges.value
+  const isValid = editData.value.subject_id &&           // MAKE SURE THIS IS CHECKED
+    editData.value.lesson_type &&
+    editData.value.duration_minutes &&
+    editData.value.scheduled_at &&
+    editData.value.payment_method &&
+    hasAnyChanges.value
+
+  console.log('📝 Form validation:', {
+    subject_id: !!editData.value.subject_id,
+    lesson_type: !!editData.value.lesson_type,
+    duration_minutes: !!editData.value.duration_minutes,
+    scheduled_at: !!editData.value.scheduled_at,
+    payment_method: !!editData.value.payment_method,
+    hasChanges: hasAnyChanges.value,
+    isValid
+  })
+
+  return isValid
 })
 
 // Methods
@@ -569,10 +533,9 @@ const getTutorName = () => {
 }
 
 const selectSubject = (subjectId) => {
-  console.log('Selecting subject:', subjectId)
-  editData.value.subject_id = subjectId
-  console.log('Subject ID set to:', editData.value.subject_id)
-  console.log('Current editData:', editData.value)
+  console.log('🎯 Selecting subject:', subjectId)
+  editData.value.subject_id = Number(subjectId)
+  console.log('✅ Subject ID set to:', editData.value.subject_id)
 }
 
 const selectLessonType = (type) => {
@@ -601,62 +564,56 @@ const formatDateTime = (dateTime) => {
 }
 
 const loadTutorSubjects = async () => {
-  try {
-    console.log('=== LOADING TUTOR SUBJECTS ===')
-    console.log('Full booking object:', props.booking)
-    console.log('Booking tutor:', props.booking.tutor)
-    console.log('Booking tutor subjects:', props.booking.tutor?.subjects)
+  console.log('🔍 === LOADING TUTOR SUBJECTS ===')
+  console.log('📖 Full booking object:', props.booking)
+  console.log('👨‍🏫 Booking tutor:', props.booking.tutor)
 
-    // Try to get tutor subjects from the booking object
+  try {
+    // Strategy 1: Check if subjects are already in the booking object
     if (props.booking.tutor?.subjects && Array.isArray(props.booking.tutor.subjects) && props.booking.tutor.subjects.length > 0) {
       availableSubjects.value = props.booking.tutor.subjects
       console.log('✅ SUCCESS: Using tutor subjects from booking:', availableSubjects.value)
+      ensureSubjectSelection() // ADD THIS LINE
       return
     }
 
-    // If not in booking, try to get tutor details from API
-    console.log('No subjects in booking, fetching tutor details from API...')
+    // Strategy 2: Get tutor ID and make API call
+    const tutorUserId = props.booking.tutor_id ||
+                       props.booking.tutor?.user_id ||
+                       props.booking.tutor?.id
 
-    const tutorId = props.booking.tutor_id ||
-                   props.booking.tutor?.id ||
-                   props.booking.tutor?.user_id ||
-                   props.booking.tutor?.user?.id
+    console.log('🎯 Tutor User ID:', tutorUserId)
 
-    console.log('Resolved tutor ID:', tutorId)
+    if (tutorUserId) {
+      console.log('📡 Fetching tutor details from API...')
 
-    if (tutorId) {
-      console.log('Fetching tutor details for ID:', tutorId)
-      const response = await api.get(`tutors/${tutorId}`)
-      console.log('Tutor API response:', response.data)
+      const response = await api.get(`tutors/${tutorUserId}`)
+      console.log('📥 API Response:', response.data)
 
-      if (response.data.tutor?.subjects && Array.isArray(response.data.tutor.subjects)) {
+      if (response.data.tutor?.subjects && Array.isArray(response.data.tutor.subjects) && response.data.tutor.subjects.length > 0) {
         availableSubjects.value = response.data.tutor.subjects
-        console.log('✅ SUCCESS: Using tutor subjects from API:', availableSubjects.value)
-        return
-      }
-
-      // Try other possible response structures
-      if (response.data.subjects && Array.isArray(response.data.subjects)) {
-        availableSubjects.value = response.data.subjects
-        console.log('✅ SUCCESS: Using subjects from API response:', availableSubjects.value)
+        console.log('✅ SUCCESS: Loaded subjects from API:', availableSubjects.value)
+        ensureSubjectSelection() // ADD THIS LINE
         return
       }
     }
 
-    console.log('⚠️ Could not load tutor subjects, using current subject as fallback')
+    console.log('⚠️ Could not load tutor subjects, creating fallback...')
 
-    // Fallback: use current booking subject
+    // Strategy 3: Use current booking subject as fallback
     if (props.booking.subject) {
       availableSubjects.value = [props.booking.subject]
-      console.log('✅ Fallback: Using current booking subject:', availableSubjects.value)
+      console.log('✅ Fallback: Using current booking subject')
     } else {
       availableSubjects.value = [{
         id: props.booking.subject_id,
-        name: 'Programare',
+        name: props.booking.subject?.name || 'Materia curentă',
         description: 'Materia din rezervarea curentă'
       }]
-      console.log('✅ Fallback: Created subject from booking data:', availableSubjects.value)
+      console.log('✅ Created fallback subject from booking data')
     }
+
+    ensureSubjectSelection() // ADD THIS LINE
 
   } catch (error) {
     console.error('❌ ERROR loading tutor subjects:', error)
@@ -664,12 +621,15 @@ const loadTutorSubjects = async () => {
     // Error fallback
     availableSubjects.value = [{
       id: props.booking.subject_id || 1,
-      name: props.booking.subject?.name || 'Programare',
+      name: props.booking.subject?.name || 'Materia curentă',
       description: 'Materia din rezervarea curentă'
     }]
-    console.log('✅ Error fallback subject created:', availableSubjects.value)
+    console.log('✅ Error fallback: Created default subject')
+    ensureSubjectSelection() // ADD THIS LINE
   }
 }
+
+
 const loadTutorAvailability = async () => {
   try {
     // Debug: Check all possible tutor ID fields
@@ -677,9 +637,9 @@ const loadTutorAvailability = async () => {
     console.log('Tutor from booking:', props.booking.tutor)
 
     const tutorId = props.booking.tutor_id ||
-                   props.booking.tutor?.id ||
-                   props.booking.tutor?.user_id ||
-                   props.booking.tutor?.user?.id
+      props.booking.tutor?.id ||
+      props.booking.tutor?.user_id ||
+      props.booking.tutor?.user?.id
 
     console.log('Resolved tutor ID:', tutorId)
 
@@ -745,15 +705,13 @@ const close = () => {
 const initializeForm = () => {
   if (!props.booking) return
 
-  console.log('=== BOOKING OBJECT STRUCTURE ===')
-  console.log('Full booking:', JSON.stringify(props.booking, null, 2))
-  console.log('Booking keys:', Object.keys(props.booking))
-  console.log('Tutor object:', props.booking.tutor)
-  console.log('Tutor keys:', props.booking.tutor ? Object.keys(props.booking.tutor) : 'No tutor object')
-  console.log('================================')
+  console.log('🔧 === INITIALIZING FORM ===')
+  console.log('📖 Full booking:', JSON.stringify(props.booking, null, 2))
+  console.log('🎯 Booking subject_id:', props.booking.subject_id)
+  console.log('📚 Booking subject:', props.booking.subject)
 
   editData.value = {
-    subject_id: props.booking.subject_id,
+    subject_id: Number(props.booking.subject_id),
     lesson_type: props.booking.lesson_type,
     duration_minutes: props.booking.duration_minutes,
     scheduled_at: props.booking.scheduled_at,
@@ -764,10 +722,23 @@ const initializeForm = () => {
   // Set selected date for time slot display
   if (props.booking.scheduled_at) {
     selectedDate.value = props.booking.scheduled_at.split('T')[0]
-    console.log('Set selectedDate to:', selectedDate.value)
   }
 
-  console.log('Form initialized with:', editData.value)
+  console.log('✅ Form initialized with editData:', editData.value)
+  console.log('🎯 Subject ID specifically set to:', editData.value.subject_id)
+}
+
+const ensureSubjectSelection = () => {
+  if (editData.value.subject_id && availableSubjects.value.length > 0) {
+    const selectedSubject = availableSubjects.value.find(s => s.id === editData.value.subject_id)
+    if (selectedSubject) {
+      console.log('✅ Current subject found in available subjects:', selectedSubject.name)
+    } else {
+      console.log('⚠️ Current subject NOT found in available subjects')
+      console.log('🔍 Looking for subject_id:', editData.value.subject_id)
+      console.log('📚 Available subjects:', availableSubjects.value.map(s => ({ id: s.id, name: s.name })))
+    }
+  }
 }
 
 // Watch for changes

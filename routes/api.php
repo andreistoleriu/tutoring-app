@@ -86,23 +86,25 @@ Route::prefix('v1')->group(function () {
 
         // Student-specific routes
         Route::prefix('student')->group(function () {
-    Route::get('dashboard', [StudentController::class, 'getDashboard']);
-    Route::get('bookings', [StudentController::class, 'getBookings']);
-    Route::get('profile', [StudentController::class, 'getProfile']);
-    Route::post('profile', [StudentController::class, 'updateProfile']);
-    Route::put('profile', [StudentController::class, 'updateProfile']);
-});
+        Route::get('dashboard', [StudentController::class, 'getDashboard']);
+        Route::get('bookings', [StudentController::class, 'getBookings']);
+        Route::get('profile', [StudentController::class, 'getProfile']);
+        Route::post('profile', [StudentController::class, 'updateProfile']);
+        Route::put('profile', [StudentController::class, 'updateProfile']);
+    });
 
         // Booking routes
         Route::prefix('bookings')->group(function () {
-            Route::post('/', [BookingController::class, 'store']);
-            Route::get('{id}', [BookingController::class, 'show']);
-            Route::patch('{id}/confirm', [BookingController::class, 'confirm']);
-            Route::put('{id}', [BookingController::class, 'update']);
-            Route::patch('{id}/reject', [BookingController::class, 'reject']);
-            Route::patch('{id}/complete', [BookingController::class, 'complete']);
-            Route::patch('{id}/cancel', [BookingController::class, 'cancel']);
-        });
+        Route::get('/', [BookingController::class, 'index']);        // List bookings
+        Route::post('/', [BookingController::class, 'store']);       // Create booking
+        Route::get('{id}', [BookingController::class, 'show']);      // Show booking
+        Route::put('{id}', [BookingController::class, 'update']);    // THIS IS THE KEY ROUTE
+        Route::patch('{id}', [BookingController::class, 'update']);  // Alternative method
+        Route::patch('{id}/confirm', [BookingController::class, 'confirm']);
+        Route::patch('{id}/complete', [BookingController::class, 'complete']);
+        Route::patch('{id}/cancel', [BookingController::class, 'cancel']);
+        Route::patch('{id}/confirm-payment', [BookingController::class, 'confirmPayment']);
+    });
 
         // Review routes
         Route::prefix('reviews')->group(function () {

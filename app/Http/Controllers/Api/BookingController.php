@@ -347,7 +347,7 @@ class BookingController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id): JsonResponse
+public function update(Request $request, $id): JsonResponse
 {
     $user = $request->user();
 
@@ -362,12 +362,27 @@ class BookingController extends Controller
     }
 
     $validated = $request->validate([
+        'subject_id' => 'sometimes|exists:subjects,id',        // ADD THIS LINE
         'scheduled_at' => 'required|date|after:now',
         'duration_minutes' => 'sometimes|integer|in:30,60,90,120',
         'lesson_type' => 'sometimes|in:online,in_person',
         'payment_method' => 'sometimes|in:card,cash',
         'student_notes' => 'nullable|string|max:1000',
     ]);
+
+    // Check if tutor teaches the requested subject (if subject is being changed)
+    if (isset($validated['subject_id'])) {
+        $tutor = $booking->tutor->tutor;
+        $tutorTeachesSubject = $tutor->subjects()
+            ->where('subject_id', $validated['subject_id'])
+            ->exists();
+
+        if (!$tutorTeachesSubject) {
+            return response()->json([
+                'message' => 'Tutor does not teach this subject.',
+            ], 422);
+        }
+    }
 
     // Check if tutor still offers the requested lesson type
     $tutor = $booking->tutor->tutor;
@@ -417,7 +432,7 @@ class BookingController extends Controller
         $price = ($duration / 60) * $tutor->hourly_rate;
     }
 
-    // Update booking
+    // Update booking - THIS WILL NOW INCLUDE subject_id
     $booking->update([
         ...$validated,
         'price' => $price,
