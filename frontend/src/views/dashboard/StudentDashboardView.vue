@@ -178,7 +178,7 @@
               <div class="ml-4 flex-1">
                 <p class="text-sm font-medium text-gray-600">Review-uri restante</p>
                 <p class="text-2xl font-bold text-gray-900">{{ formatNumber(dashboardData?.stats?.pending_reviews || 0)
-                  }}</p>
+                }}</p>
                 <p class="text-xs mt-1"
                   :class="(dashboardData?.stats?.pending_reviews || 0) > 0 ? 'text-yellow-600' : 'text-gray-500'">
                   {{ getPendingReviewsText() }}
@@ -439,9 +439,9 @@
                   <!-- Review Action -->
                   <div class="flex items-center space-x-3">
                     <span class="text-sm font-medium text-gray-900">{{ booking.price || 0 }} RON</span>
-                    <button v-if="booking.can_review"
+                    <button v-if="booking.status === 'completed'" @click="openReviewModal(booking)"
                       class="px-3 py-1 bg-yellow-500 text-white text-xs rounded-lg hover:bg-yellow-600 transition-colors">
-                      Evaluează
+                      ★ Evaluează
                     </button>
                   </div>
                 </div>
@@ -488,6 +488,13 @@
       </div>
     </div>
   </div>
+
+  <ReviewModal
+  v-if="showReviewModal"
+  :booking="selectedBookingForReview"
+  @close="closeReviewModal"
+  @success="handleReviewSuccess"
+/>
 </template>
 
 <script setup>
@@ -496,6 +503,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useStudentStore } from '@/stores/student'
 import api from '@/services/api'
+import ReviewModal from '@/components/ReviewModal.vue'
 
 // Composables
 const authStore = useAuthStore()
@@ -511,6 +519,8 @@ const recentBookings = ref([])
 
 // New reactive state for enhanced functionality
 const showSpendingModal = ref(false)
+const showReviewModal = ref(false)
+const selectedBookingForReview = ref(null)
 
 // Learning tips
 const tips = [
@@ -696,7 +706,7 @@ const getThisMonthScheduledBookings = () => {
     try {
       const bookingDate = new Date(booking.scheduled_at)
       return bookingDate.getMonth() === currentMonth &&
-             bookingDate.getFullYear() === currentYear
+        bookingDate.getFullYear() === currentYear
     } catch (error) {
       console.error('Error parsing booking date:', booking.scheduled_at)
       return false
@@ -815,6 +825,22 @@ const cancelBooking = async (bookingId) => {
     console.error('❌ Error cancelling booking:', error)
     alert('Eroare la anularea rezervării. Încearcă din nou.')
   }
+}
+
+const openReviewModal = (booking) => {
+  selectedBookingForReview.value = booking
+  showReviewModal.value = true
+}
+
+const closeReviewModal = () => {
+  showReviewModal.value = false
+  selectedBookingForReview.value = null
+}
+
+const handleReviewSuccess = async (result) => {
+  alert('Review-ul a fost procesat cu succes!')
+  closeReviewModal()
+  await loadDashboardData()
 }
 
 // Lifecycle
