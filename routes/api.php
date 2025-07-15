@@ -108,9 +108,12 @@ Route::prefix('v1')->group(function () {
 
         // Review routes
         Route::prefix('reviews')->group(function () {
-            Route::post('/', [ReviewController::class, 'store']);
-            Route::post('{review}/reply', [ReviewController::class, 'reply']);
-        });
+        Route::post('/', [ReviewController::class, 'store']);           // Create review
+        Route::get('{id}', [ReviewController::class, 'show']);          // Get review by ID
+        Route::put('{id}', [ReviewController::class, 'update']);        // Update review
+        Route::delete('{id}', [ReviewController::class, 'destroy']);    // Delete review
+        Route::post('{review}/reply', [ReviewController::class, 'reply']); // Reply to review
+    });
 
         // Payment routes
         Route::prefix('payments')->group(function () {

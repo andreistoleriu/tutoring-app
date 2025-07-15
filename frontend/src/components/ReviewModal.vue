@@ -1,219 +1,140 @@
+<!-- frontend/src/components/ReviewModal.vue -->
 <template>
-  <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click="closeModal">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" @click.stop>
+  <div
+    v-if="isOpen"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+    @click.self="closeModal"
+  >
+    <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
       <!-- Header -->
-      <div class="p-6 border-b border-gray-200">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-xl font-bold text-gray-900">
-              {{ isEditMode ? 'Editează review-ul' : 'Evaluează lecția' }}
-            </h3>
-            <p class="text-gray-600 mt-1">
-              {{ booking.subject?.name }} cu {{ getTutorName(booking.tutor) }}
-            </p>
-          </div>
-          <button
-            @click="closeModal"
-            class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
+      <div class="flex items-center justify-between p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900">
+          {{ isEditing ? 'Actualizează Review-ul' : 'Lasă un Review' }}
+        </h3>
+        <button
+          @click="closeModal"
+          :disabled="submitting"
+          class="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       <!-- Content -->
-      <div class="p-6">
+      <div class="p-6 space-y-6">
         <!-- Booking Info -->
-        <div class="bg-gray-50 rounded-xl p-4 mb-6">
-          <div class="flex items-center space-x-4">
-            <!-- Tutor Avatar -->
-            <div class="flex-shrink-0">
-              <img
-                v-if="booking.tutor?.profile_image"
-                :src="booking.tutor.profile_image"
-                :alt="getTutorName(booking.tutor)"
-                class="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-              >
-              <div
-                v-else
-                class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white font-semibold shadow-sm"
-              >
-                {{ getInitials(getTutorName(booking.tutor)) }}
-              </div>
-            </div>
+        <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+          <h4 class="font-medium text-gray-900">Detalii Rezervare</h4>
+          <div class="text-sm text-gray-600 space-y-1">
+            <p><span class="font-medium">Tutor:</span> {{ booking.tutor.first_name }} {{ booking.tutor.last_name }}</p>
+            <p><span class="font-medium">Materia:</span> {{ booking.subject.name }}</p>
+            <p><span class="font-medium">Data:</span> {{ formatDate(booking.scheduled_at) }}</p>
+            <p><span class="font-medium">Durată:</span> {{ booking.duration_minutes }} minute</p>
+          </div>
+        </div>
 
-            <!-- Booking Details -->
-            <div class="flex-1">
-              <h4 class="font-semibold text-gray-900">{{ booking.subject?.name }}</h4>
-              <p class="text-sm text-gray-600">cu {{ getTutorName(booking.tutor) }}</p>
-              <div class="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                <span class="flex items-center space-x-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                  </svg>
-                  <span>{{ formatDate(booking.completed_at || booking.scheduled_at) }}</span>
-                </span>
-                <span class="flex items-center space-x-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-                  </svg>
-                  <span>{{ booking.price }} RON</span>
-                </span>
-              </div>
-            </div>
+        <!-- Error Message -->
+        <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div class="flex">
+            <svg class="w-5 h-5 text-red-400 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+            <p class="text-red-800">{{ error }}</p>
           </div>
         </div>
 
         <!-- Review Form -->
-        <form @submit.prevent="submitReview">
-          <!-- Rating Section -->
-          <div class="mb-6">
+        <form @submit.prevent="submitReview" class="space-y-6">
+          <!-- Rating -->
+          <div>
             <label class="block text-sm font-medium text-gray-700 mb-3">
-              Cum evaluezi această lecție? *
+              Evaluare <span class="text-red-500">*</span>
             </label>
-            <div class="flex items-center space-x-2">
-              <!-- Star Rating -->
-              <div class="flex space-x-1">
-                <button
-                  v-for="star in 5"
-                  :key="star"
-                  type="button"
-                  @click="reviewForm.rating = star"
-                  @mouseover="hoverRating = star"
-                  @mouseleave="hoverRating = 0"
-                  class="focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 rounded transition-transform hover:scale-110"
-                >
-                  <svg
-                    class="w-8 h-8 transition-colors"
-                    :class="(hoverRating ? star <= hoverRating : star <= reviewForm.rating)
-                      ? 'text-yellow-400 fill-current'
-                      : 'text-gray-300'"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </button>
-              </div>
-
-              <!-- Rating Text -->
-              <div class="ml-4">
-                <span class="text-lg font-semibold text-gray-900">
-                  {{ reviewForm.rating || 0 }}/5
-                </span>
-                <p class="text-sm text-gray-600">
-                  {{ getRatingText(reviewForm.rating) }}
-                </p>
-              </div>
+            <div class="flex items-center space-x-1">
+              <button
+                v-for="star in 5"
+                :key="star"
+                type="button"
+                @click="setRating(star)"
+                :disabled="submitting"
+                class="p-1 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition-colors"
+                :class="{
+                  'text-yellow-400': star <= reviewForm.rating,
+                  'text-gray-300': star > reviewForm.rating,
+                  'hover:text-yellow-400': !submitting
+                }"
+              >
+                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              </button>
             </div>
+            <p class="text-xs text-gray-500 mt-1">
+              {{ getRatingText(reviewForm.rating) }}
+            </p>
           </div>
 
-          <!-- Comment Section -->
-          <div class="mb-6">
+          <!-- Comment -->
+          <div>
             <label for="comment" class="block text-sm font-medium text-gray-700 mb-2">
               Comentariu (opțional)
             </label>
             <textarea
               id="comment"
               v-model="reviewForm.comment"
+              :disabled="submitting"
               rows="4"
               maxlength="1000"
-              placeholder="Scrie aici părerea ta despre lecție, tutore și experiența avută..."
-              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            ></textarea>
-            <div class="flex justify-between items-center mt-2">
-              <p class="text-xs text-gray-500">
-                Comentariul tău va fi vizibil public și va ajuta alți studenți să aleagă tutorul potrivit.
-              </p>
-              <span class="text-xs text-gray-400">
-                {{ reviewForm.comment?.length || 0 }}/1000
-              </span>
+              placeholder="Împărtășește experiența ta cu acest tutor..."
+              class="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                     focus:ring-blue-500 focus:border-blue-500 resize-none
+                     disabled:bg-gray-100 disabled:cursor-not-allowed"
+            />
+            <div class="flex justify-between mt-1">
+              <p class="text-xs text-gray-500">Maxim 1000 de caractere</p>
+              <p class="text-xs text-gray-500">{{ reviewForm.comment.length }}/1000</p>
             </div>
           </div>
 
-          <!-- Quick Review Templates -->
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-3">
-              Sau alege un template rapid:
-            </label>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                v-for="template in reviewTemplates"
-                :key="template.rating"
-                type="button"
-                @click="applyTemplate(template)"
-                class="p-3 text-left border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors"
-              >
-                <div class="flex items-center mb-1">
-                  <div class="flex space-x-1 mr-2">
-                    <svg
-                      v-for="star in 5"
-                      :key="star"
-                      class="w-4 h-4"
-                      :class="star <= template.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                    </svg>
-                  </div>
-                  <span class="text-sm font-medium text-gray-900">{{ template.title }}</span>
-                </div>
-                <p class="text-xs text-gray-600">{{ template.comment.substring(0, 60) }}...</p>
-              </button>
-            </div>
-          </div>
+          <!-- Actions -->
+          <div class="flex space-x-3 pt-4">
+            <!-- Delete Button (only when editing) -->
+            <button
+              v-if="isEditing"
+              type="button"
+              @click="deleteReview"
+              :disabled="submitting"
+              class="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-medium
+                     hover:bg-red-700 focus:ring-4 focus:ring-red-200
+                     disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {{ submitting ? 'Se șterge...' : 'Șterge Review' }}
+            </button>
 
-          <!-- Error Message -->
-          <div v-if="error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div class="flex items-center">
-              <svg class="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <span class="text-red-800 text-sm">{{ error }}</span>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex items-center justify-between space-x-4">
+            <!-- Cancel Button -->
             <button
               type="button"
               @click="closeModal"
-              class="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+              :disabled="submitting"
+              class="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium
+                     hover:bg-gray-400 focus:ring-4 focus:ring-gray-200
+                     disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Anulează
             </button>
 
-            <div class="flex space-x-3">
-              <!-- Delete Button (if editing existing review) -->
-              <button
-                v-if="isEditMode && existingReview"
-                type="button"
-                @click="deleteReview"
-                :disabled="submitting"
-                class="px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Șterge
-              </button>
-
-              <!-- Submit Button -->
-              <button
-                type="submit"
-                :disabled="!isFormValid || submitting"
-                class="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                <span v-if="submitting" class="flex items-center">
-                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Se trimite...
-                </span>
-                <span v-else>
-                  {{ isEditMode ? 'Actualizează' : 'Trimite review-ul' }}
-                </span>
-              </button>
-            </div>
+            <!-- Submit Button -->
+            <button
+              type="submit"
+              :disabled="!isFormValid || submitting"
+              class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium
+                     hover:bg-blue-700 focus:ring-4 focus:ring-blue-200
+                     disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {{ submitting ? 'Se trimite...' : (isEditing ? 'Actualizează' : 'Trimite Review') }}
+            </button>
           </div>
         </form>
       </div>
@@ -222,11 +143,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useStudentStore } from '@/stores/student'
 
 // Props
 const props = defineProps({
+  isOpen: {
+    type: Boolean,
+    required: true
+  },
   booking: {
     type: Object,
     required: true
@@ -244,125 +169,91 @@ const emit = defineEmits(['close', 'success'])
 const studentStore = useStudentStore()
 
 // State
-const reviewForm = ref({
+const submitting = ref(false)
+const error = ref('')
+
+const reviewForm = reactive({
   rating: 0,
   comment: ''
 })
 
-const hoverRating = ref(0)
-const submitting = ref(false)
-const error = ref('')
-
 // Computed
-const isEditMode = computed(() => !!props.existingReview)
+const isEditing = computed(() => !!props.existingReview)
 
 const isFormValid = computed(() => {
-  return reviewForm.value.rating > 0
+  return reviewForm.rating > 0 && reviewForm.rating <= 5
 })
 
-// Review templates for quick selection
-const reviewTemplates = ref([
-  {
-    rating: 5,
-    title: 'Excelent',
-    comment: 'Lecție foarte bună! Tutorul a explicat foarte clar și a fost foarte răbdător. Recomand cu încredere!'
-  },
-  {
-    rating: 4,
-    title: 'Foarte bun',
-    comment: 'Experiență pozitivă. Tutorul cunoaște bine materia și explică accesibil. O să mai rezerv lecții.'
-  },
-  {
-    rating: 3,
-    title: 'Decent',
-    comment: 'Lecție OK, dar ar putea fi îmbunătățită. Tutorul știe materia dar explicațiile ar putea fi mai clare.'
-  },
-  {
-    rating: 2,
-    title: 'Sub așteptări',
-    comment: 'Nu am fost foarte mulțumit de lecție. Tutorul părea nepregătit și explicațiile nu au fost foarte clare.'
-  }
-])
-
 // Methods
-const getTutorName = (tutor) => {
-  if (!tutor) return 'Tutor necunoscut'
-
-  if (tutor.first_name || tutor.last_name) {
-    return `${tutor.first_name || ''} ${tutor.last_name || ''}`.trim()
-  }
-
-  return tutor.full_name || tutor.name || 'Tutor necunoscut'
-}
-
-const getInitials = (name) => {
-  if (!name) return 'NA'
-  const nameParts = name.trim().split(' ')
-  if (nameParts.length === 1) return nameParts[0][0].toUpperCase()
-  return nameParts[0][0].toUpperCase() + nameParts[nameParts.length - 1][0].toUpperCase()
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ro-RO', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    })
-  } catch (error) {
-    return 'Data necunoscută'
+const setRating = (rating) => {
+  if (!submitting.value) {
+    reviewForm.rating = rating
   }
 }
 
 const getRatingText = (rating) => {
-  const ratingTexts = {
-    1: 'Foarte slab',
-    2: 'Slab',
-    3: 'Decent',
-    4: 'Bun',
-    5: 'Excelent'
+  const texts = {
+    1: 'Foarte nesatisfăcut',
+    2: 'Nesatisfăcut',
+    3: 'Neutru',
+    4: 'Satisfăcut',
+    5: 'Foarte satisfăcut'
   }
-  return ratingTexts[rating] || 'Selectează rating-ul'
+  return texts[rating] || 'Selectează o evaluare'
 }
 
-const applyTemplate = (template) => {
-  reviewForm.value.rating = template.rating
-  reviewForm.value.comment = template.comment
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('ro-RO', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const submitReview = async () => {
-  if (!isFormValid.value || submitting.value) return
+  if (!isFormValid.value) return
 
   submitting.value = true
   error.value = ''
 
   try {
-    const reviewData = {
+    console.log('📝 Submitting review for booking:', props.booking.id)
+    console.log('📝 Review data:', {
       booking_id: props.booking.id,
-      rating: reviewForm.value.rating,
-      comment: reviewForm.value.comment
-    }
-
-    if (isEditMode.value) {
-      await studentStore.updateReview(props.existingReview.id, {
-        rating: reviewForm.value.rating,
-        comment: reviewForm.value.comment
-      })
-    } else {
-      await studentStore.submitReview(reviewData)
-    }
-
-    emit('success', {
-      action: isEditMode.value ? 'updated' : 'created',
-      review: reviewData
+      rating: reviewForm.rating,
+      comment: reviewForm.comment || null
     })
 
+    const reviewData = {
+      booking_id: props.booking.id,  // ✅ Ensure booking_id is always sent
+      rating: reviewForm.rating,
+      comment: reviewForm.comment.trim() || null
+    }
+
+    let response
+    if (isEditing.value) {
+      response = await studentStore.updateReview(props.existingReview.id, reviewData)
+    } else {
+      response = await studentStore.submitReview(reviewData)
+    }
+
+    console.log('✅ Review submitted successfully:', response)
+
+    emit('success', {
+      action: isEditing.value ? 'updated' : 'created',
+      review: response.review || response
+    })
+
+    closeModal()
+
   } catch (err) {
-    console.error('Error submitting review:', err)
-    error.value = err.response?.data?.message || 'A apărut o eroare la trimiterea review-ului'
+    console.error('❌ Error submitting review:', err)
+    error.value = err.response?.data?.message || err.message || 'A apărut o eroare la trimiterea review-ului'
   } finally {
     submitting.value = false
   }
@@ -382,8 +273,10 @@ const deleteReview = async () => {
       review: props.existingReview
     })
 
+    closeModal()
+
   } catch (err) {
-    console.error('Error deleting review:', err)
+    console.error('❌ Error deleting review:', err)
     error.value = err.response?.data?.message || 'A apărut o eroare la ștergerea review-ului'
   } finally {
     submitting.value = false
@@ -392,29 +285,63 @@ const deleteReview = async () => {
 
 const closeModal = () => {
   if (!submitting.value) {
+    resetForm()
     emit('close')
   }
 }
 
+const resetForm = () => {
+  reviewForm.rating = 0
+  reviewForm.comment = ''
+  error.value = ''
+}
+
 // Lifecycle
 onMounted(() => {
+  console.log('📋 Review modal mounted with booking:', props.booking)
+  console.log('📋 Existing review:', props.existingReview)
+
   // Pre-fill form if editing existing review
   if (props.existingReview) {
-    reviewForm.value.rating = props.existingReview.rating
-    reviewForm.value.comment = props.existingReview.comment || ''
+    reviewForm.rating = props.existingReview.rating
+    reviewForm.comment = props.existingReview.comment || ''
   }
 })
 
 // Watch for prop changes
 watch(() => props.existingReview, (newReview) => {
   if (newReview) {
-    reviewForm.value.rating = newReview.rating
-    reviewForm.value.comment = newReview.comment || ''
+    reviewForm.rating = newReview.rating
+    reviewForm.comment = newReview.comment || ''
+  } else {
+    resetForm()
   }
 }, { immediate: true })
+
+watch(() => props.isOpen, (isOpen) => {
+  if (!isOpen) {
+    resetForm()
+  }
+})
 </script>
 
 <style scoped>
+/* Mobile-first responsive design */
+@media (max-width: 640px) {
+  .max-w-md {
+    max-width: calc(100vw - 2rem);
+    margin: 1rem;
+  }
+
+  .p-6 {
+    padding: 1rem;
+  }
+
+  .space-x-3 > * + * {
+    margin-left: 0.5rem;
+  }
+}
+
 /* Custom scrollbar */
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;
@@ -432,5 +359,16 @@ watch(() => props.existingReview, (newReview) => {
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Focus styles for accessibility */
+button:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+textarea:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
 }
 </style>

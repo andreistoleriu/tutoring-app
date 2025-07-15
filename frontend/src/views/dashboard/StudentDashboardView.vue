@@ -435,15 +435,6 @@
                       </p>
                     </div>
                   </div>
-
-                  <!-- Review Action -->
-                  <div class="flex items-center space-x-3">
-                    <span class="text-sm font-medium text-gray-900">{{ booking.price || 0 }} RON</span>
-                    <button v-if="booking.status === 'completed'" @click="openReviewModal(booking)"
-                      class="px-3 py-1 bg-yellow-500 text-white text-xs rounded-lg hover:bg-yellow-600 transition-colors">
-                      ★ Evaluează
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>

@@ -55,7 +55,44 @@ class StudentController extends Controller
                 ];
             });
 
-        // Get recent completed bookings that can be reviewed
+        // ✅ NEW: Get recent completed bookings for "Lecții recente" section
+        $recentBookings = $user->studentBookings()
+            ->with(['tutor', 'subject', 'review'])
+            ->where('status', 'completed')
+            ->orderBy('completed_at', 'desc')
+            ->take(10)
+            ->get()
+            ->map(function ($booking) {
+                return [
+                    'id' => $booking->id,
+                    'tutor' => [
+                        'id' => $booking->tutor->id,
+                        'first_name' => $booking->tutor->first_name,
+                        'last_name' => $booking->tutor->last_name,
+                    ],
+                    'subject' => [
+                        'id' => $booking->subject->id,
+                        'name' => $booking->subject->name,
+                    ],
+                    'scheduled_at' => $booking->scheduled_at->toISOString(),
+                    'completed_at' => $booking->completed_at ? $booking->completed_at->toISOString() : null,
+                    'duration_minutes' => $booking->duration_minutes,
+                    'lesson_type' => $booking->lesson_type,
+                    'status' => $booking->status,
+                    'price' => $booking->price,
+                    'review' => $booking->review ? [
+                        'id' => $booking->review->id,
+                        'rating' => $booking->review->rating,
+                        'comment' => $booking->review->comment,
+                        'created_at' => $booking->review->created_at->toISOString(),
+                    ] : null,
+                    'can_review' => !$booking->review,
+                    'has_review' => !!$booking->review,
+                    'needs_review' => !$booking->review,
+                ];
+            });
+
+        // Get recent completed bookings that can be reviewed (EXISTING FUNCTIONALITY)
         $pendingReviews = $user->studentBookings()
             ->with(['tutor', 'subject'])
             ->where('status', 'completed')
@@ -81,8 +118,9 @@ class StudentController extends Controller
                 ];
             });
 
-        // Calculate stats
+        // ✅ ENHANCED: Calculate stats with more details
         $stats = [
+            // Keep existing stats
             'total_bookings' => $user->studentBookings()->count(),
             'completed_lessons' => $user->studentBookings()->where('status', 'completed')->count(),
             'total_spent' => $user->studentBookings()
@@ -90,17 +128,33 @@ class StudentController extends Controller
                 ->where('payment_status', 'paid')
                 ->sum('price'),
             'pending_bookings' => $user->studentBookings()->where('status', 'pending')->count(),
+
+            // Add new stats for better dashboard experience
+            'this_month_bookings' => $user->studentBookings()
+                ->where('scheduled_at', '>=', $currentDate->copy()->startOfMonth())
+                ->where('scheduled_at', '<=', $currentDate->copy()->endOfMonth())
+                ->count(),
+            'this_month_spent' => $user->studentBookings()
+                ->where('status', 'completed')
+                ->where('scheduled_at', '>=', $currentDate->copy()->startOfMonth())
+                ->where('scheduled_at', '<=', $currentDate->copy()->endOfMonth())
+                ->sum('price'),
+            'pending_reviews' => $user->studentBookings()
+                ->where('status', 'completed')
+                ->whereDoesntHave('review')
+                ->count(),
         ];
 
         return response()->json([
             'stats' => $stats,
             'upcoming_bookings' => $upcomingBookings,
-            'pending_reviews' => $pendingReviews,
+            'recent_bookings' => $recentBookings,  // ✅ NEW: Added for "Lecții recente"
+            'pending_reviews' => $pendingReviews,   // ✅ KEPT: Existing functionality
         ]);
     }
 
     /**
-     * Generate recent activity for the student
+     * Generate recent activity for the student (EXISTING FUNCTIONALITY - KEPT)
      */
     private function generateRecentActivity($user, $days = 7)
     {
@@ -185,7 +239,7 @@ class StudentController extends Controller
     }
 
     /**
-     * Get student bookings with filters
+     * Get student bookings with filters (EXISTING FUNCTIONALITY - KEPT)
      */
     public function getBookings(Request $request): JsonResponse
     {
@@ -228,7 +282,7 @@ class StudentController extends Controller
         $bookings = $query->orderBy('scheduled_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
-        // Transform the data
+        // Transform the data (ENHANCED to include review status)
         $bookings->getCollection()->transform(function ($booking) {
             return [
                 'id' => $booking->id,
@@ -263,6 +317,10 @@ class StudentController extends Controller
                     'created_at' => $booking->review->created_at->toISOString(),
                 ] : null,
                 'created_at' => $booking->created_at->toISOString(),
+                // ✅ NEW: Added review status flags for frontend
+                'can_review' => $booking->status === 'completed' && !$booking->review,
+                'has_review' => !!$booking->review,
+                'needs_review' => $booking->status === 'completed' && !$booking->review,
             ];
         });
 
@@ -280,7 +338,7 @@ class StudentController extends Controller
     }
 
      /**
-     * Get student profile
+     * Get student profile (EXISTING FUNCTIONALITY - KEPT)
      */
     public function getProfile(Request $request): JsonResponse
     {
@@ -303,7 +361,7 @@ class StudentController extends Controller
     }
 
      /**
-     * Update student profile
+     * Update student profile (EXISTING FUNCTIONALITY - KEPT)
      */
     public function updateProfile(Request $request): JsonResponse
     {
