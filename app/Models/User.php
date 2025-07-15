@@ -86,4 +86,20 @@ class User extends Authenticatable
     {
         return $this->hasOne(Subscription::class, 'tutor_id');
     }
+
+    public function reminders(): HasMany
+{
+    return $this->hasMany(Reminder::class);
+}
+
+public function notificationPreferences(): HasOne
+{
+    return $this->hasOne(NotificationPreference::class);
+}
+
+public function getNotificationPreferences(): NotificationPreference
+{
+    return $this->notificationPreferences ?:
+           $this->notificationPreferences()->create(NotificationPreference::getDefaultPreferences());
+}
 }

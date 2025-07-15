@@ -254,10 +254,9 @@
           </div>
         </div>
 
-        <!-- Rest of your existing content -->
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <!-- Left Column - Upcoming Lessons -->
+          <!-- Left Column - Upcoming and Recent Lessons -->
           <div class="lg:col-span-2 space-y-6">
 
             <!-- Upcoming Bookings -->
@@ -388,71 +387,331 @@
               </div>
             </div>
 
-            <!-- Recent Lessons -->
-            <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-6">
-              <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                <svg class="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                Lecții recente
-              </h2>
+            <!-- ENHANCED Recent Lessons Section -->
+            <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-4 sm:p-6">
+              <!-- Header -->
+              <div class="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 class="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
+                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                  </svg>
+                  Lecții recente
+                </h2>
+
+                <router-link to="/student/bookings"
+                  class="text-purple-600 hover:text-purple-700 font-medium text-sm transition-colors hidden sm:block"
+                >
+                  Vezi toate
+                </router-link>
+              </div>
 
               <!-- Empty State for recent lessons -->
               <div v-if="!recentBookings?.length" class="text-center py-8">
-                <div class="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
+                  <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
                     </path>
                   </svg>
                 </div>
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Nicio lecție finalizată</h3>
-                <p class="text-gray-600">Când vei finaliza primele lecții, le vei vedea aici.</p>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Nicio lecție recentă</h3>
+                <p class="text-gray-600 mb-4">Lecțiile finalizate vor apărea aici.</p>
+                <router-link to="/tutors"
+                  class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Rezervă prima lecție
+                </router-link>
               </div>
 
               <!-- Recent Lessons List -->
-              <div v-else class="space-y-4">
-                <div v-for="booking in recentBookings" :key="booking.id"
-                  class="flex items-center justify-between p-4 border border-gray-200 rounded-xl">
-                  <div class="flex items-center space-x-4">
-                    <!-- Tutor Avatar -->
-                    <div>
-                      <img v-if="booking.tutor?.profile_image" :src="booking.tutor.profile_image"
-                        :alt="getTutorName(booking.tutor)"
-                        class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm">
-                      <div v-else
-                        class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
-                        {{ getInitials(getTutorName(booking.tutor)) }}
+              <div v-else class="space-y-3">
+                <div
+                  v-for="lesson in recentBookings"
+                  :key="lesson.id"
+                  class="group bg-white border border-gray-200 rounded-xl p-3 sm:p-4 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
+                  @click="handleViewLessonDetails(lesson)"
+                >
+                  <div class="flex items-start space-x-3">
+                    <!-- Tutor Avatar with Status -->
+                    <div class="relative flex-shrink-0">
+                      <div
+                        v-if="lesson.tutor?.profile_image"
+                        class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ring-2 ring-white shadow-md"
+                      >
+                        <img
+                          :src="lesson.tutor.profile_image"
+                          :alt="getTutorName(lesson.tutor)"
+                          class="w-full h-full object-cover"
+                          @error="handleImageError"
+                        >
+                      </div>
+                      <div
+                        v-else
+                        class="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-white shadow-md"
+                        :class="getSubjectColor(lesson.subject?.name)"
+                      >
+                        {{ getInitials(getTutorName(lesson.tutor)) }}
+                      </div>
+
+                      <!-- Status Badge -->
+                      <div
+                        class="absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold shadow-sm"
+                        :class="getStatusColor(lesson.status)"
+                        :title="getStatusLabel(lesson.status)"
+                      >
+                        {{ getStatusIcon(lesson.status) }}
                       </div>
                     </div>
 
-                    <!-- Lesson Info -->
-                    <div>
-                      <h4 class="font-medium text-gray-900">{{ booking.subject?.name || 'Necunoscut' }}</h4>
-                      <p class="text-sm text-gray-600">cu {{ getTutorName(booking.tutor) }}</p>
-                      <p class="text-xs text-gray-500">{{ formatDate(booking.completed_at || booking.scheduled_at) }}
+                    <!-- Lesson Content -->
+                    <div class="flex-1 min-w-0">
+                      <!-- Subject and Badge Row -->
+                      <div class="flex items-center space-x-2 mb-2">
+                        <h4 class="font-semibold text-gray-900 text-sm sm:text-base truncate flex-1">
+                          {{ lesson.subject?.name || 'Necunoscut' }}
+                        </h4>
+                        <span class="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">
+                          {{ lesson.subject?.icon || '📚' }}
+                        </span>
+                      </div>
+
+                      <!-- Tutor Name -->
+                      <p class="text-sm text-gray-600 truncate mb-2 flex items-center">
+                        <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        cu {{ getTutorName(lesson.tutor) }}
                       </p>
+
+                      <!-- Lesson Details -->
+                      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 mb-3">
+                        <span class="flex items-center">
+                          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                          </svg>
+                          {{ formatRelativeDate(lesson.completed_at || lesson.scheduled_at) }}
+                        </span>
+
+                        <span class="flex items-center">
+                          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          </svg>
+                          {{ lesson.duration_minutes || 60 }} min
+                        </span>
+
+                        <span class="flex items-center">
+                          {{ lesson.lesson_type === 'online' ? '💻' : '👥' }}
+                          {{ lesson.lesson_type === 'online' ? 'Online' : 'Față în față' }}
+                        </span>
+                      </div>
+
+                      <!-- Review Section -->
+                      <div v-if="lesson.review || lesson.has_review" class="flex items-center space-x-2 mb-2">
+                        <span class="text-xs text-gray-600">Evaluarea ta:</span>
+                        <div class="flex text-yellow-400">
+                          <svg
+                            v-for="star in 5"
+                            :key="star"
+                            class="w-3 h-3"
+                            :class="star <= (lesson.review?.rating || lesson.review_rating || 0) ? 'text-yellow-400' : 'text-gray-300'"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                          </svg>
+                        </div>
+                      </div>
                     </div>
+
+                    <!-- Right Side: Price and Actions -->
+                    <div class="flex flex-col items-end space-y-2 flex-shrink-0">
+                      <!-- Price -->
+                      <div class="text-right">
+                        <p class="text-lg font-bold text-gray-900">
+                          {{ lesson.price || 0 }} <span class="text-sm font-normal text-gray-600">RON</span>
+                        </p>
+                      </div>
+
+                      <!-- Action Button -->
+                      <button
+                        v-if="lesson.status === 'completed' && !lesson.review && !lesson.has_review"
+                        @click.stop="openReviewModal(lesson)"
+                        class="text-xs px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-full hover:bg-yellow-200 transition-colors font-medium"
+                      >
+                        ⭐ Scrie review
+                      </button>
+
+                      <div v-else-if="lesson.review || lesson.has_review" class="text-xs text-green-600 font-medium flex items-center">
+                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Evaluat
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mobile Quick Actions Bar -->
+                  <div class="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center sm:hidden">
+                    <button
+                      @click.stop="handleRepeatLesson(lesson)"
+                      class="flex items-center space-x-1 text-xs text-purple-600 hover:text-purple-700 font-medium"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                      </svg>
+                      <span>Repetă</span>
+                    </button>
+
+                    <button
+                      v-if="lesson.status === 'completed' && !lesson.review && !lesson.has_review"
+                      @click.stop="openReviewModal(lesson)"
+                      class="flex items-center space-x-1 text-xs text-yellow-600 hover:text-yellow-700 font-medium"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                      </svg>
+                      <span>Review</span>
+                    </button>
+
+                    <button
+                      @click.stop="handleContactTutor(lesson)"
+                      class="flex items-center space-x-1 text-xs text-gray-600 hover:text-gray-700 font-medium"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                      </svg>
+                      <span>Contact</span>
+                    </button>
+
+                    <button
+                      @click.stop="handleViewLessonDetails(lesson)"
+                      class="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                      <span>Detalii</span>
+                    </button>
                   </div>
                 </div>
               </div>
+
+              <!-- View All Button (Mobile) -->
+              <router-link
+                v-if="recentBookings?.length"
+                to="/student/bookings"
+                class="w-full mt-4 py-3 border-2 border-purple-200 text-purple-600 rounded-xl hover:bg-purple-50 transition-colors font-medium sm:hidden flex items-center justify-center space-x-2"
+              >
+                <span>Vezi toate lecțiile</span>
+                <span v-if="dashboardData?.stats?.total_lessons" class="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-bold">
+                  {{ dashboardData.stats.total_lessons }}
+                </span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </router-link>
             </div>
           </div>
 
+
           <!-- Right Column - Tips & Activity -->
           <div class="space-y-6">
-            <!-- Daily Tip -->
-            <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
-              <h3 class="text-lg font-bold mb-3 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
-                  </path>
+
+             <!-- Active Reminders Section -->
+            <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-6">
+              <!-- Header with Warning Icon -->
+              <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <!-- Warning triangle icon (indicates active alerts) -->
+                <svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
                 </svg>
-                Sfat pentru învățare
+                Reminder-uri active
+                <!-- Show count badge if there are reminders -->
+                <span v-if="upcomingReminders.length > 0"
+                      class="ml-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
+                  {{ upcomingReminders.length }}
+                </span>
               </h3>
-              <p class="text-blue-100 leading-relaxed">{{ currentTip }}</p>
+
+              <!-- Content Area -->
+              <div class="space-y-3">
+                <!-- Loading State -->
+                <div v-if="loadingReminders" class="text-center py-4">
+                  <div class="animate-spin w-6 h-6 border-2 border-yellow-600 border-t-transparent rounded-full mx-auto"></div>
+                  <p class="text-sm text-gray-500 mt-2">Se încarcă reminder-urile...</p>
+                </div>
+
+                <!-- Empty State: When no active reminders -->
+                <div v-else-if="upcomingReminders.length === 0" class="text-center py-6">
+                  <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  </div>
+                  <p class="text-gray-500 text-sm">Nu ai reminder-uri active</p>
+                  <p class="text-gray-400 text-xs mt-1">Reminder-urile vor apărea aici când ai lecții programate</p>
+                </div>
+
+                <!-- Active Reminders List -->
+                <div v-else>
+                  <div v-for="reminder in upcomingReminders" :key="reminder.id"
+                       class="p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer"
+                       @click="handleReminderClick(reminder)">
+
+                    <!-- Reminder Content -->
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1 min-w-0">
+                        <!-- Title -->
+                        <p class="text-sm font-medium text-yellow-800 truncate">
+                          {{ reminder.title }}
+                        </p>
+
+                        <!-- Time until reminder -->
+                        <div class="flex items-center mt-1 space-x-2">
+                          <svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                          </svg>
+                          <p class="text-xs text-yellow-600">{{ formatReminderTime(reminder) }}</p>
+                        </div>
+
+                        <!-- Additional info for lesson reminders -->
+                        <div v-if="reminder.type && reminder.type.includes('lesson') && reminder.data" class="mt-2 text-xs text-yellow-700">
+                          📚 {{ reminder.data.subject }} •
+                          {{ reminder.data.lesson_type === 'online' ? '💻 Online' : '👥 Față în față' }}
+                        </div>
+                      </div>
+
+                      <!-- Reminder Type Icon -->
+                      <div class="flex-shrink-0 ml-2">
+                        <!-- Lesson reminder icon -->
+                        <svg v-if="reminder.type && reminder.type.includes('lesson')" class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <!-- Review reminder icon -->
+                        <svg v-else-if="reminder.type && reminder.type.includes('review')" class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                        </svg>
+                        <!-- Default reminder icon -->
+                        <svg v-else class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-3.14 5.86-2.86-5.86zm0 0V12a3 3 0 00-6 0v5l-3 3h12l-3-3z"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- View All Link (if more than 3 reminders) -->
+                  <div v-if="upcomingReminders.length >= 3" class="mt-4 text-center">
+                    <button @click="viewAllReminders"
+                            class="text-sm text-yellow-700 hover:text-yellow-800 font-medium">
+                      Vezi toate reminder-urile ({{ totalRemindersCount }})
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Quick Stats -->
@@ -474,6 +733,20 @@
                 </div>
               </div>
             </div>
+
+                        <!-- Daily Tip -->
+            <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+              <h3 class="text-lg font-bold mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
+                  </path>
+                </svg>
+                Sfat pentru învățare
+              </h3>
+              <p class="text-blue-100 leading-relaxed">{{ currentTip }}</p>
+            </div>
+
           </div>
         </div>
       </div>
@@ -481,11 +754,13 @@
   </div>
 
   <ReviewModal
-  v-if="showReviewModal"
-  :booking="selectedBookingForReview"
-  @close="closeReviewModal"
-  @success="handleReviewSuccess"
-/>
+    v-if="showReviewModal"
+    :booking="selectedBookingForReview"
+    :existing-review="selectedBookingForReview?.review"
+    :is-open="showReviewModal"
+    @close="closeReviewModal"
+    @success="handleReviewSuccess"
+  />
 </template>
 
 <script setup>
@@ -513,6 +788,12 @@ const showSpendingModal = ref(false)
 const showReviewModal = ref(false)
 const selectedBookingForReview = ref(null)
 
+// NEW: Reminder system state
+const upcomingReminders = ref([])
+const loadingReminders = ref(false)
+const totalRemindersCount = ref(0)
+
+
 // Learning tips
 const tips = [
   "Pregătește-te pentru lecții citind materialul în avans.",
@@ -529,6 +810,224 @@ const currentTip = computed(() => {
   const tipIndex = today.getDay() % tips.length
   return tips[tipIndex]
 })
+
+// ENHANCED HELPER FUNCTIONS FOR RECENT LESSONS
+const getSubjectColor = (subject) => {
+  const colors = {
+    'Matematică': 'bg-gradient-to-br from-blue-500 to-blue-600',
+    'Fizică': 'bg-gradient-to-br from-green-500 to-green-600',
+    'Chimie': 'bg-gradient-to-br from-red-500 to-red-600',
+    'Informatică': 'bg-gradient-to-br from-purple-500 to-purple-600',
+    'Română': 'bg-gradient-to-br from-yellow-500 to-yellow-600',
+    'Engleză': 'bg-gradient-to-br from-indigo-500 to-indigo-600'
+  }
+  return colors[subject] || 'bg-gradient-to-br from-gray-500 to-gray-600'
+}
+
+const getStatusColor = (status) => {
+  const colors = {
+    'completed': 'bg-green-500 text-white',
+    'confirmed': 'bg-blue-500 text-white',
+    'pending': 'bg-yellow-500 text-white',
+    'cancelled': 'bg-red-500 text-white'
+  }
+  return colors[status] || 'bg-gray-500 text-white'
+}
+
+const getStatusIcon = (status) => {
+  const icons = {
+    'completed': '✓',
+    'confirmed': '⏳',
+    'pending': '⏱',
+    'cancelled': '✗'
+  }
+  return icons[status] || '?'
+}
+
+const formatRelativeDate = (dateString) => {
+  if (!dateString) return ''
+
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
+
+  if (diffInDays === 0) return 'Azi'
+  if (diffInDays === 1) return 'Ieri'
+  if (diffInDays < 7) return `${diffInDays} zile în urmă`
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} săptămâni în urmă`
+  return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })
+}
+
+const handleImageError = (event) => {
+  event.target.style.display = 'none'
+  event.target.parentElement.classList.add('border-2', 'border-gray-300')
+}
+
+// NEW REMINDER METHODS
+/**
+ * Load upcoming reminders for the dashboard
+ */
+const loadUpcomingReminders = async () => {
+  loadingReminders.value = true
+
+  try {
+    console.log('🔔 Loading upcoming reminders...')
+
+    const response = await api.get('reminders', {
+      params: {
+        limit: 5, // Only show 5 most recent
+        upcoming_only: true // Only show future reminders
+      }
+    })
+
+    // Filter to only show unsent future reminders
+    upcomingReminders.value = response.data.reminders.filter(reminder =>
+      !reminder.is_sent && new Date(reminder.scheduled_at) > new Date()
+    )
+
+    totalRemindersCount.value = response.data.total_count || upcomingReminders.value.length
+
+    console.log('✅ Loaded reminders:', {
+      upcoming: upcomingReminders.value.length,
+      total: totalRemindersCount.value
+    })
+
+  } catch (error) {
+    console.error('❌ Error loading reminders:', error)
+    // Don't show error to user for this non-critical feature
+    upcomingReminders.value = []
+
+    // For demo purposes, create mock reminders if API is not ready
+    if (process.env.NODE_ENV === 'development') {
+      upcomingReminders.value = [
+        {
+          id: 1,
+          type: 'lesson_reminder_student',
+          title: 'Lecție Matematică mâine',
+          scheduled_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours from now
+          is_sent: false,
+          is_read: false,
+          booking_id: 123,
+          data: {
+            subject: 'Matematică',
+            tutor_name: 'Mihai Ionescu',
+            lesson_type: 'online'
+          }
+        },
+        {
+          id: 2,
+          type: 'review_reminder',
+          title: 'Scrie review pentru lecția de Fizică',
+          scheduled_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(), // 6 hours from now
+          is_sent: false,
+          is_read: false,
+          booking_id: 124,
+          data: {
+            subject: 'Fizică',
+            tutor_name: 'Alexandru Popa'
+          }
+        }
+      ]
+      console.log('🔧 Using mock reminders for development')
+    }
+  } finally {
+    loadingReminders.value = false
+  }
+}
+
+/**
+ * Format reminder time in a user-friendly way
+ */
+const formatReminderTime = (reminder) => {
+  const now = new Date()
+  const reminderTime = new Date(reminder.scheduled_at)
+  const diffInHours = Math.ceil((reminderTime - now) / (1000 * 60 * 60))
+
+  if (diffInHours < 0) {
+    return 'Expirat'
+  } else if (diffInHours < 1) {
+    const diffInMinutes = Math.ceil((reminderTime - now) / (1000 * 60))
+    return `în ${diffInMinutes} ${diffInMinutes === 1 ? 'minut' : 'minute'}`
+  } else if (diffInHours === 1) {
+    return 'în 1 oră'
+  } else if (diffInHours < 24) {
+    return `în ${diffInHours} ore`
+  } else if (diffInHours < 48) {
+    return 'mâine'
+  } else {
+    const diffInDays = Math.ceil(diffInHours / 24)
+    return `în ${diffInDays} zile`
+  }
+}
+
+/**
+ * Handle reminder click - navigate to relevant page
+ */
+const handleReminderClick = async (reminder) => {
+  console.log('📋 Reminder clicked:', reminder)
+
+  // Mark as read if needed (only if API is available)
+  if (!reminder.is_read && reminder.id && process.env.NODE_ENV !== 'development') {
+    try {
+      await api.post(`reminders/${reminder.id}/mark-read`)
+    } catch (error) {
+      console.error('Error marking reminder as read:', error)
+    }
+  }
+
+  // Navigate based on reminder type
+  if (reminder.booking_id) {
+    switch (reminder.type) {
+      case 'lesson_reminder_student':
+        router.push(`/student/bookings/${reminder.booking_id}`)
+        break
+      case 'review_reminder':
+        router.push(`/student/bookings?review=${reminder.booking_id}`)
+        break
+      default:
+        router.push('/student/bookings')
+    }
+  } else {
+    router.push('/notifications')
+  }
+}
+
+/**
+ * View all reminders
+ */
+const viewAllReminders = () => {
+  router.push('/notifications')
+}
+
+// ENHANCED HELPER FUNCTIONS FOR RECENT LESSONS
+const handleRepeatLesson = (lesson) => {
+  // Navigate to tutor's booking page with pre-selected subject
+  router.push({
+    name: 'tutor-detail',
+    params: { id: lesson.tutor_id },
+    query: {
+      subject: lesson.subject?.id,
+      lesson_type: lesson.lesson_type
+    }
+  })
+}
+
+const handleContactTutor = (lesson) => {
+  // You can implement this based on your messaging system
+  // For now, we'll show an alert, but you should implement proper messaging
+  alert(`Contact ${getTutorName(lesson.tutor)} pentru ${lesson.subject?.name || 'lecție'}`)
+
+  // Or redirect to a contact/messaging page:
+  // router.push({ name: 'messages', query: { tutor_id: lesson.tutor_id } })
+}
+
+const handleViewLessonDetails = (lesson) => {
+  // Navigate to booking details page
+  router.push({
+    name: 'booking-details',
+    params: { id: lesson.id }
+  })
+}
 
 // ENHANCED HELPER FUNCTIONS
 const formatNumber = (num) => {
@@ -761,10 +1260,36 @@ const loadDashboardData = async () => {
       recentBookings.value = response.data.recent_bookings || []
     }
 
+    // Ensure recent bookings have proper structure for ReviewModal
+    recentBookings.value = recentBookings.value.map(booking => ({
+      ...booking,
+      // Ensure tutor object has the structure ReviewModal expects
+      tutor: {
+        ...booking.tutor,
+        user: booking.tutor?.user || {
+          id: booking.tutor?.user_id || booking.tutor?.id,
+          first_name: booking.tutor?.first_name || booking.tutor?.user?.first_name || 'Tutor',
+          last_name: booking.tutor?.last_name || booking.tutor?.user?.last_name || '',
+          full_name: getTutorName(booking.tutor)
+        }
+      },
+      // Ensure subject object exists
+      subject: booking.subject || { name: 'Necunoscut', icon: '📚' },
+      // Review flags
+      has_review: !!booking.review,
+      can_review: booking.status === 'completed' && !booking.review,
+      needs_review: booking.status === 'completed' && !booking.review
+    }))
+
+    // Also load reminders
+    await loadUpcomingReminders()
+
     console.log('✅ Dashboard data loaded:', {
       upcoming: upcomingBookings.value.length,
       recent: recentBookings.value.length,
-      stats: dashboardData.value?.stats
+      reminders: upcomingReminders.value.length,
+      stats: dashboardData.value?.stats,
+      recentBookingsStructure: recentBookings.value[0] // Log first item to check structure
     })
 
   } catch (err) {
@@ -787,6 +1312,7 @@ const loadDashboardData = async () => {
     }
     upcomingBookings.value = []
     recentBookings.value = []
+    upcomingReminders.value = []
   } finally {
     loading.value = false
   }
@@ -819,19 +1345,99 @@ const cancelBooking = async (bookingId) => {
 }
 
 const openReviewModal = (booking) => {
-  selectedBookingForReview.value = booking
+  console.log('🌟 Opening review modal for booking:', booking)
+
+  // Ensure we have the booking data in the correct format that ReviewModal expects
+  selectedBookingForReview.value = {
+    id: booking.id,
+    tutor_id: booking.tutor_id || booking.tutor?.id,
+    subject_id: booking.subject?.id,
+    scheduled_at: booking.scheduled_at,
+    completed_at: booking.completed_at || booking.scheduled_at,
+    status: booking.status,
+    price: booking.price,
+    duration_minutes: booking.duration_minutes || 60,
+    lesson_type: booking.lesson_type,
+    student_notes: booking.student_notes || '',
+    tutor_notes: booking.tutor_notes || '',
+    // Tutor information in the expected format
+    tutor: {
+      id: booking.tutor_id || booking.tutor?.id,
+      user_id: booking.tutor?.user_id || booking.tutor?.id,
+      first_name: booking.tutor?.first_name || booking.tutor?.user?.first_name || getTutorName(booking.tutor).split(' ')[0] || 'Tutor',
+      last_name: booking.tutor?.last_name || booking.tutor?.user?.last_name || getTutorName(booking.tutor).split(' ').slice(1).join(' ') || '',
+      full_name: getTutorName(booking.tutor),
+      profile_image: booking.tutor?.profile_image,
+      rating: booking.tutor?.rating || 0,
+      // Include user object if ReviewModal expects it
+      user: {
+        id: booking.tutor?.user_id || booking.tutor?.id,
+        first_name: booking.tutor?.first_name || booking.tutor?.user?.first_name || getTutorName(booking.tutor).split(' ')[0] || 'Tutor',
+        last_name: booking.tutor?.last_name || booking.tutor?.user?.last_name || getTutorName(booking.tutor).split(' ').slice(1).join(' ') || '',
+        full_name: getTutorName(booking.tutor)
+      }
+    },
+    // Subject information
+    subject: {
+      id: booking.subject?.id,
+      name: booking.subject?.name || 'Necunoscut',
+      icon: booking.subject?.icon || '📚'
+    },
+    // Review information
+    review: booking.review || null,
+    has_review: booking.has_review || !!booking.review,
+    can_review: booking.status === 'completed' && !booking.review && !booking.has_review,
+    needs_review: booking.status === 'completed' && !booking.review && !booking.has_review
+  }
+
+  console.log('📋 Prepared booking data for ReviewModal:', selectedBookingForReview.value)
   showReviewModal.value = true
 }
 
 const closeReviewModal = () => {
+  console.log('🔒 Closing review modal')
   showReviewModal.value = false
   selectedBookingForReview.value = null
 }
 
-const handleReviewSuccess = async (result) => {
-  alert('Review-ul a fost procesat cu succes!')
-  closeReviewModal()
-  await loadDashboardData()
+const handleReviewSuccess = async (reviewData) => {
+  console.log('✅ Review submitted successfully:', reviewData)
+
+  try {
+    // Update the local state to reflect the new review
+    const bookingId = selectedBookingForReview.value?.id
+    if (bookingId) {
+      // Update in recent bookings
+      const recentIndex = recentBookings.value.findIndex(b => b.id === bookingId)
+      if (recentIndex !== -1) {
+        recentBookings.value[recentIndex] = {
+          ...recentBookings.value[recentIndex],
+          review: reviewData.review,
+          has_review: true,
+          can_review: false,
+          review_rating: reviewData.review?.rating
+        }
+      }
+
+      // Update dashboard stats
+      if (dashboardData.value?.stats) {
+        dashboardData.value.stats.pending_reviews = Math.max(0, (dashboardData.value.stats.pending_reviews || 1) - 1)
+      }
+    }
+
+    // Close modal
+    closeReviewModal()
+
+    // Show success message
+    alert('Review-ul a fost trimis cu succes! Mulțumim pentru feedback.')
+
+    // Optionally reload dashboard data to get fresh stats
+    // await loadDashboardData()
+
+  } catch (error) {
+    console.error('❌ Error handling review success:', error)
+    alert('Review-ul a fost trimis, dar a apărut o eroare la actualizarea interfaței.')
+  }
 }
 
 // Lifecycle
@@ -857,5 +1463,36 @@ onMounted(async () => {
 
 .group:hover .group-hover\:bg-yellow-200 {
   background-color: rgb(254 240 138);
+}
+
+/* Enhanced focus states for accessibility */
+button:focus,
+a:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Mobile-specific touch optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .group:hover {
+    transform: none;
+  }
+}
+
+/* Ensure proper spacing for touch targets on mobile */
+@media (max-width: 640px) {
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .touch-target {
+    padding: 12px;
+  }
 }
 </style>

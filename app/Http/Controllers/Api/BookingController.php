@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
+use App\Services\ReminderService;
 
 class BookingController extends Controller
 {
@@ -198,6 +199,8 @@ class BookingController extends Controller
     // TODO: Send notification to tutor (implement later)
     // event(new BookingCreated($booking));
 
+     app(ReminderService::class)->createLessonReminders($booking);
+
     return response()->json([
         'message' => 'Booking created successfully',
         'booking' => [
@@ -289,6 +292,8 @@ class BookingController extends Controller
         }
 
         $booking->load(['student', 'tutor', 'subject']);
+
+        app(ReminderService::class)->createReviewReminder($booking);
 
         return response()->json([
             'message' => 'Booking completed successfully',
