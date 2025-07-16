@@ -1,4 +1,6 @@
 <?php
+// File: app/Services/ReminderService.php
+// COMPLETE VERSION - Add this method to your existing ReminderService
 
 namespace App\Services;
 
@@ -32,10 +34,19 @@ class ReminderService
 
     private function createStudentLessonReminder(Booking $booking, $preferences): void
     {
-        $reminderTime = $booking->scheduled_at->subHours($preferences->reminder_hours_before);
+        // FIX: Use copy() to avoid modifying the original date
+        $reminderTime = $booking->scheduled_at->copy()->subHours($preferences->reminder_hours_before);
+
+        \Log::info('Creating student reminder', [
+            'booking_id' => $booking->id,
+            'scheduled_at' => $booking->scheduled_at,
+            'reminder_time' => $reminderTime,
+            'hours_before' => $preferences->reminder_hours_before,
+            'user_id' => $booking->student_id
+        ]);
 
         if ($reminderTime > now()) {
-            Reminder::create([
+            $reminder = Reminder::create([
                 'user_id' => $booking->student_id,
                 'booking_id' => $booking->id,
                 'type' => 'lesson_reminder_student',
@@ -50,12 +61,20 @@ class ReminderService
                 'scheduled_at' => $reminderTime,
                 'channel' => $preferences->email_notifications ? 'email' : 'in_app',
             ]);
+
+            \Log::info('Student reminder created successfully', ['reminder_id' => $reminder->id]);
+        } else {
+            \Log::warning('Reminder time is in the past, skipping', [
+                'reminder_time' => $reminderTime,
+                'now' => now()
+            ]);
         }
     }
 
     private function createTutorLessonReminder(Booking $booking, $preferences): void
     {
-        $reminderTime = $booking->scheduled_at->subHours($preferences->reminder_hours_before);
+        // FIX: Use copy() to avoid modifying the original date
+        $reminderTime = $booking->scheduled_at->copy()->subHours($preferences->reminder_hours_before);
 
         if ($reminderTime > now()) {
             Reminder::create([
@@ -153,8 +172,6 @@ class ReminderService
         }
     }
 
-    // Add to app/Services/ReminderService.php
-
     public function getUserReminders(User $user, int $limit = 10): \Illuminate\Database\Eloquent\Collection
     {
         return $user->reminders()
@@ -197,5 +214,22 @@ class ReminderService
         \Log::info("Deleted {$deletedCount} old reminders older than {$daysOld} days");
 
         return $deletedCount;
+    }
+
+    // ADD THIS NEW METHOD for manual reminder creation
+    public function createManualReminder(User $user, array $data): Reminder
+    {
+        return Reminder::create([
+            'user_id' => $user->id,
+            'booking_id' => $data['booking_id'] ?? null,
+            'type' => $data['type'] ?? 'lesson_reminder_student',
+            'title' => $data['title'] ?? 'Test Reminder',
+            'message' => $data['message'] ?? 'This is a test reminder',
+            'data' => $data['data'] ?? [],
+            'scheduled_at' => $data['scheduled_at'] ?? now()->addHours(1),
+            'channel' => $data['channel'] ?? 'in_app',
+            'is_sent' => $data['is_sent'] ?? false,
+            'is_read' => $data['is_read'] ?? false,
+        ]);
     }
 }

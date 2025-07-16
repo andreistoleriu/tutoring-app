@@ -204,8 +204,21 @@ class BookingController extends Controller
     // TODO: Send notification to tutor (implement later)
     // event(new BookingCreated($booking));
 
-     if ($booking->status === 'confirmed') {
+     try {
         $this->reminderService->createLessonReminders($booking);
+        \Log::info('Reminders created for new booking', [
+            'booking_id' => $booking->id,
+            'student_id' => $booking->student_id,
+            'tutor_id' => $booking->tutor_id,
+            'scheduled_at' => $booking->scheduled_at
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Failed to create reminders for booking', [
+            'booking_id' => $booking->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        // Don't fail the booking creation if reminder creation fails
     }
 
     return response()->json([
