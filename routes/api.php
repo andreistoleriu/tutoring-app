@@ -121,18 +121,18 @@ Route::prefix('v1')->group(function () {
         Route::prefix('payments')->group(function () {
             Route::patch('{id}/confirm-cash', [BookingController::class, 'confirmCashPayment']);
         });
-    });
 
-    Route::prefix('reminders')->group(function () {
+        Route::prefix('reminders')->group(function () {
         Route::get('/', [ReminderController::class, 'index']);
         Route::post('{id}/mark-read', [ReminderController::class, 'markAsRead']);
         Route::post('mark-all-read', [ReminderController::class, 'markAllAsRead']);
         Route::get('unread-count', [ReminderController::class, 'getUnreadCount']);
     });
 
-    Route::prefix('notification-preferences')->group(function () {
+        Route::prefix('notification-preferences')->group(function () {
         Route::get('/', [NotificationPreferenceController::class, 'show']);
         Route::put('/', [NotificationPreferenceController::class, 'update']);
+    });
     });
 });
 
