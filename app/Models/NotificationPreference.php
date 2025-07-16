@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class NotificationPreferences extends Model
+class NotificationPreference extends Model // FIXED: Changed from NotificationPreferences to NotificationPreference
 {
     use HasFactory;
+
+    protected $table = 'notification_preferences'; // ADDED: Explicit table name
 
     protected $fillable = [
         'user_id',

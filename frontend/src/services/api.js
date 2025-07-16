@@ -2,9 +2,9 @@ import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 
-// Create axios instance with CORRECT base URL (no /api/v1/ here)
+// FIXED: Correct base URL with /api/v1 prefix
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -28,7 +28,7 @@ api.interceptors.request.use(
       method: config.method?.toUpperCase(),
       url: config.url,
       baseURL: config.baseURL,
-      fullURL: config.baseURL + '/' + config.url,
+      fullURL: config.baseURL + '/' + config.url.replace(/^\/+/, ''), // Remove leading slashes
       hasAuth: !!token
     })
 

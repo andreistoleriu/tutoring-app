@@ -88,33 +88,34 @@ class User extends Authenticatable
     }
 
     public function reminders(): HasMany
-{
-    return $this->hasMany(Reminder::class);
-}
-
-public function notificationPreferences(): HasOne
-{
-    return $this->hasOne(NotificationPreferences::class);
-}
-
-/**
- * Get or create notification preferences for the user
- */
-public function getNotificationPreferences()
-{
-    if ($this->notificationPreferences) {
-        return $this->notificationPreferences;
+    {
+        return $this->hasMany(Reminder::class);
     }
 
-    return $this->notificationPreferences()->create([
-        'lesson_reminders' => true,
-        'review_reminders' => true,
-        'payment_reminders' => true,
-        'booking_confirmations' => true,
-        'email_notifications' => true,
-        'sms_notifications' => false,
-        'push_notifications' => true,
-        'reminder_hours_before' => 24,
-    ]);
-}
+    // FIXED: Changed from NotificationPreferences to NotificationPreference (removed 's')
+    public function notificationPreferences(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    /**
+     * Get or create notification preferences for the user
+     */
+    public function getNotificationPreferences()
+    {
+        if ($this->notificationPreferences) {
+            return $this->notificationPreferences;
+        }
+
+        return $this->notificationPreferences()->create([
+            'lesson_reminders' => true,
+            'review_reminders' => true,
+            'payment_reminders' => true,
+            'booking_confirmations' => true,
+            'email_notifications' => true,
+            'sms_notifications' => false,
+            'push_notifications' => true,
+            'reminder_hours_before' => 24,
+        ]);
+    }
 }
