@@ -617,11 +617,22 @@
             </div>
           </div>
 
-
           <!-- Right Column - Tips & Activity -->
           <div class="space-y-6">
+            <!-- Daily Tip -->
+            <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+              <h3 class="text-lg font-bold mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
+                  </path>
+                </svg>
+                Sfat pentru învățare
+              </h3>
+              <p class="text-blue-100 leading-relaxed">{{ currentTip }}</p>
+            </div>
 
-             <!-- Active Reminders Section -->
+            <!-- Active Reminders Section -->
             <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-6">
               <!-- Header with Warning Icon -->
               <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -733,20 +744,6 @@
                 </div>
               </div>
             </div>
-
-                        <!-- Daily Tip -->
-            <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
-              <h3 class="text-lg font-bold mb-3 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
-                  </path>
-                </svg>
-                Sfat pentru învățare
-              </h3>
-              <p class="text-blue-100 leading-relaxed">{{ currentTip }}</p>
-            </div>
-
           </div>
         </div>
       </div>
@@ -783,16 +780,15 @@ const dashboardData = ref(null)
 const upcomingBookings = ref([])
 const recentBookings = ref([])
 
-// New reactive state for enhanced functionality
+// Enhanced functionality state
 const showSpendingModal = ref(false)
 const showReviewModal = ref(false)
 const selectedBookingForReview = ref(null)
 
-// NEW: Reminder system state
+// Reminder system state
 const upcomingReminders = ref([])
 const loadingReminders = ref(false)
 const totalRemindersCount = ref(0)
-
 
 // Learning tips
 const tips = [
@@ -871,65 +867,30 @@ const loadUpcomingReminders = async () => {
   loadingReminders.value = true
 
   try {
-    console.log('🔔 Loading upcoming reminders...')
+    console.log('🔔 Loading upcoming reminders from API...')
 
     const response = await api.get('reminders', {
       params: {
-        limit: 5, // Only show 5 most recent
-        upcoming_only: true // Only show future reminders
+        limit: 5,
+        upcoming_only: true
       }
     })
 
-    // Filter to only show unsent future reminders
     upcomingReminders.value = response.data.reminders.filter(reminder =>
       !reminder.is_sent && new Date(reminder.scheduled_at) > new Date()
     )
 
     totalRemindersCount.value = response.data.total_count || upcomingReminders.value.length
 
-    console.log('✅ Loaded reminders:', {
+    console.log('✅ Loaded reminders from API:', {
       upcoming: upcomingReminders.value.length,
       total: totalRemindersCount.value
     })
 
   } catch (error) {
     console.error('❌ Error loading reminders:', error)
-    // Don't show error to user for this non-critical feature
+    // Keep your existing fallback logic
     upcomingReminders.value = []
-
-    // For demo purposes, create mock reminders if API is not ready
-    if (process.env.NODE_ENV === 'development') {
-      upcomingReminders.value = [
-        {
-          id: 1,
-          type: 'lesson_reminder_student',
-          title: 'Lecție Matematică mâine',
-          scheduled_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours from now
-          is_sent: false,
-          is_read: false,
-          booking_id: 123,
-          data: {
-            subject: 'Matematică',
-            tutor_name: 'Mihai Ionescu',
-            lesson_type: 'online'
-          }
-        },
-        {
-          id: 2,
-          type: 'review_reminder',
-          title: 'Scrie review pentru lecția de Fizică',
-          scheduled_at: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(), // 6 hours from now
-          is_sent: false,
-          is_read: false,
-          booking_id: 124,
-          data: {
-            subject: 'Fizică',
-            tutor_name: 'Alexandru Popa'
-          }
-        }
-      ]
-      console.log('🔧 Using mock reminders for development')
-    }
   } finally {
     loadingReminders.value = false
   }
@@ -942,6 +903,7 @@ const formatReminderTime = (reminder) => {
   const now = new Date()
   const reminderTime = new Date(reminder.scheduled_at)
   const diffInHours = Math.ceil((reminderTime - now) / (1000 * 60 * 60))
+  const diffInDays = Math.ceil(diffInHours / 24)
 
   if (diffInHours < 0) {
     return 'Expirat'
@@ -951,12 +913,20 @@ const formatReminderTime = (reminder) => {
   } else if (diffInHours === 1) {
     return 'în 1 oră'
   } else if (diffInHours < 24) {
-    return `în ${diffInHours} ore`
+    return `în ${diffInHours} ${diffInHours === 1 ? 'oră' : 'ore'}`
   } else if (diffInHours < 48) {
     return 'mâine'
-  } else {
-    const diffInDays = Math.ceil(diffInHours / 24)
+  } else if (diffInDays === 2) {
+    return 'poimâine'
+  } else if (diffInDays <= 7) {
     return `în ${diffInDays} zile`
+  } else {
+    return reminderTime.toLocaleDateString('ro-RO', {
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 }
 

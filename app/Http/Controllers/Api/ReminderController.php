@@ -14,32 +14,45 @@ class ReminderController extends Controller
     ) {}
 
     public function index(Request $request): JsonResponse
-    {
-        $user = $request->user();
-        $reminders = $this->reminderService->getUserReminders($user, 20);
+{
+    $user = $request->user();
+    $limit = $request->input('limit', 10);
+    $upcomingOnly = $request->boolean('upcoming_only', false);
 
-        return response()->json([
-            'reminders' => $reminders->map(function ($reminder) {
-                return [
-                    'id' => $reminder->id,
-                    'type' => $reminder->type,
-                    'title' => $reminder->title,
-                    'message' => $reminder->message,
-                    'scheduled_at' => $reminder->scheduled_at->toISOString(),
-                    'sent_at' => $reminder->sent_at?->toISOString(),
-                    'is_sent' => $reminder->is_sent,
-                    'is_read' => $reminder->is_read,
-                    'booking' => $reminder->booking ? [
-                        'id' => $reminder->booking->id,
-                        'subject' => $reminder->booking->subject->name,
-                        'scheduled_at' => $reminder->booking->scheduled_at->toISOString(),
-                    ] : null,
-                    'time_until' => $reminder->getTimeUntil(),
-                ];
-            }),
-            'unread_count' => $this->reminderService->getUnreadCount($user),
-        ]);
+    if ($upcomingOnly) {
+        $reminders = $this->reminderService->getUpcomingReminders($user, $limit);
+    } else {
+        $reminders = $this->reminderService->getUserReminders($user, $limit);
     }
+
+    return response()->json([
+        'reminders' => $reminders->map(function ($reminder) {
+            return [
+                'id' => $reminder->id,
+                'type' => $reminder->type,
+                'title' => $reminder->title,
+                'message' => $reminder->message,
+                'data' => $reminder->data,
+                'scheduled_at' => $reminder->scheduled_at->toISOString(),
+                'sent_at' => $reminder->sent_at?->toISOString(),
+                'is_sent' => $reminder->is_sent,
+                'is_read' => $reminder->is_read,
+                'booking_id' => $reminder->booking_id,
+                'booking' => $reminder->booking ? [
+                    'id' => $reminder->booking->id,
+                    'subject' => [
+                        'name' => $reminder->booking->subject->name,
+                    ],
+                    'scheduled_at' => $reminder->booking->scheduled_at->toISOString(),
+                    'status' => $reminder->booking->status,
+                ] : null,
+                'time_until' => $reminder->time_until,
+            ];
+        }),
+        'unread_count' => $this->reminderService->getUnreadCount($user),
+        'total_count' => $reminders->count(),
+    ]);
+}
 
     public function markAsRead(Request $request, $id): JsonResponse
     {

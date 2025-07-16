@@ -13,6 +13,11 @@ use App\Services\ReminderService;
 
 class BookingController extends Controller
 {
+        public function __construct(ReminderService $reminderService)
+    {
+        $this->reminderService = $reminderService;
+    }
+
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -199,7 +204,9 @@ class BookingController extends Controller
     // TODO: Send notification to tutor (implement later)
     // event(new BookingCreated($booking));
 
-     app(ReminderService::class)->createLessonReminders($booking);
+     if ($booking->status === 'confirmed') {
+        $this->reminderService->createLessonReminders($booking);
+    }
 
     return response()->json([
         'message' => 'Booking created successfully',
@@ -262,6 +269,8 @@ class BookingController extends Controller
         $booking->confirm();
         $booking->load(['student', 'tutor', 'subject']);
 
+        $this->reminderService->createLessonReminders($booking);
+
         return response()->json([
             'message' => 'Booking confirmed successfully',
             'booking' => $booking,
@@ -274,6 +283,8 @@ class BookingController extends Controller
 
         $booking = Booking::where('tutor_id', $user->id)
             ->findOrFail($id);
+
+
 
         if (!$booking->canBeCompleted()) {
             return response()->json([

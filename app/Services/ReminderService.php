@@ -153,14 +153,27 @@ class ReminderService
         }
     }
 
+    // Add to app/Services/ReminderService.php
+
     public function getUserReminders(User $user, int $limit = 10): \Illuminate\Database\Eloquent\Collection
     {
         return $user->reminders()
-                   ->with('booking.subject', 'booking.tutor', 'booking.student')
-                   ->where('scheduled_at', '>=', now()->subDays(7)) // Last 7 days
-                   ->orderBy('scheduled_at', 'desc')
-                   ->limit($limit)
-                   ->get();
+                ->with(['booking.subject', 'booking.tutor', 'booking.student'])
+                ->where('scheduled_at', '>=', now()->subDays(7)) // Last 7 days
+                ->orderBy('scheduled_at', 'desc')
+                ->limit($limit)
+                ->get();
+    }
+
+    public function getUpcomingReminders(User $user, int $limit = 5): \Illuminate\Database\Eloquent\Collection
+    {
+        return $user->reminders()
+                ->where('is_sent', false)
+                ->where('scheduled_at', '>', now())
+                ->with(['booking.subject', 'booking.tutor', 'booking.student'])
+                ->orderBy('scheduled_at', 'asc')
+                ->limit($limit)
+                ->get();
     }
 
     public function getUnreadCount(User $user): int
@@ -171,5 +184,18 @@ class ReminderService
     public function markAllAsRead(User $user): bool
     {
         return $user->reminders()->unread()->update(['is_read' => true]);
+    }
+
+    public function deleteOldReminders(int $daysOld = 30): int
+    {
+        $cutoffDate = now()->subDays($daysOld);
+
+        $deletedCount = Reminder::where('scheduled_at', '<', $cutoffDate)
+            ->where('is_sent', true)
+            ->delete();
+
+        \Log::info("Deleted {$deletedCount} old reminders older than {$daysOld} days");
+
+        return $deletedCount;
     }
 }

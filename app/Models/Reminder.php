@@ -80,7 +80,13 @@ class Reminder extends Model
         return !$this->is_sent && $this->scheduled_at <= now();
     }
 
-    public function getTimeUntil(): string
+    public function scopeUpcoming($query)
+    {
+        return $query->where('is_sent', false)
+                    ->where('scheduled_at', '>', now());
+    }
+
+    public function getTimeUntilAttribute(): string
     {
         if ($this->scheduled_at < now()) {
             return 'Overdue';

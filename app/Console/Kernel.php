@@ -19,9 +19,15 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // Send reminders every 15 minutes
-        $schedule->command('reminders:send')
+            $schedule->command('reminders:send')
              ->everyFifteenMinutes()
              ->withoutOverlapping();
+
+        // Clean up old reminders weekly
+            $schedule->command('reminders:cleanup')
+                    ->weekly()
+                    ->sundays()
+                    ->at('02:00');
     }
 
     /**
