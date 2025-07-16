@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class NotificationPreference extends Model
+class NotificationPreferences extends Model
 {
     use HasFactory;
 
@@ -30,24 +30,11 @@ class NotificationPreference extends Model
         'email_notifications' => 'boolean',
         'sms_notifications' => 'boolean',
         'push_notifications' => 'boolean',
+        'reminder_hours_before' => 'integer',
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public static function getDefaultPreferences(): array
-    {
-        return [
-            'lesson_reminders' => true,
-            'review_reminders' => true,
-            'payment_reminders' => true,
-            'booking_confirmations' => true,
-            'email_notifications' => true,
-            'sms_notifications' => false,
-            'push_notifications' => true,
-            'reminder_hours_before' => 24,
-        ];
     }
 }

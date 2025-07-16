@@ -859,38 +859,47 @@ const handleImageError = (event) => {
   event.target.parentElement.classList.add('border-2', 'border-gray-300')
 }
 
-// NEW REMINDER METHODS
-/**
- * Load upcoming reminders for the dashboard
- */
+
+
 const loadUpcomingReminders = async () => {
   loadingReminders.value = true
 
   try {
     console.log('🔔 Loading upcoming reminders from API...')
 
-    const response = await api.get('reminders', {
+    // Correct API call - uses /api/v1/reminders (not double path)
+    const response = await api.get('/reminders', {
       params: {
         limit: 5,
         upcoming_only: true
       }
     })
 
-    upcomingReminders.value = response.data.reminders.filter(reminder =>
-      !reminder.is_sent && new Date(reminder.scheduled_at) > new Date()
-    )
+    upcomingReminders.value = response.data.reminders || []
+    totalRemindersCount.value = response.data.total_count || 0
 
-    totalRemindersCount.value = response.data.total_count || upcomingReminders.value.length
-
-    console.log('✅ Loaded reminders from API:', {
+    console.log('✅ Loaded reminders:', {
       upcoming: upcomingReminders.value.length,
-      total: totalRemindersCount.value
+      total: totalRemindersCount.value,
+      data: response.data
     })
 
   } catch (error) {
     console.error('❌ Error loading reminders:', error)
-    // Keep your existing fallback logic
-    upcomingReminders.value = []
+
+    if (error.response?.status === 401) {
+      console.log('🔒 User not authenticated - need to login')
+      // Handle gracefully - user needs to log in
+      upcomingReminders.value = []
+    } else if (error.response?.status === 500) {
+      console.error('💥 Server error:', error.response?.data)
+      upcomingReminders.value = []
+    } else {
+      console.error('💥 Unexpected error:', error.response?.data)
+      upcomingReminders.value = []
+    }
+
+    totalRemindersCount.value = 0
   } finally {
     loadingReminders.value = false
   }

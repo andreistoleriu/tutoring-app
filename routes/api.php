@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\StudentController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\ReminderController;
+use App\Http\Controllers\Api\NotificationPreferenceController;
 
 /*
 |--------------------------------------------------------------------------

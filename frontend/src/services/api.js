@@ -2,7 +2,7 @@ import axios from 'axios'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 
-// Create axios instance with corrected base URL
+// Create axios instance with CORRECT base URL (no /api/v1/ here)
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
   headers: {
@@ -18,6 +18,9 @@ api.interceptors.request.use(
     const token = localStorage.getItem('auth_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+      console.log('✅ Auth token added to request')
+    } else {
+      console.log('❌ No auth token found in localStorage')
     }
 
     // Debug: Log the final URL being called
@@ -25,7 +28,8 @@ api.interceptors.request.use(
       method: config.method?.toUpperCase(),
       url: config.url,
       baseURL: config.baseURL,
-      fullURL: config.baseURL + config.url
+      fullURL: config.baseURL + '/' + config.url,
+      hasAuth: !!token
     })
 
     return config
@@ -50,6 +54,7 @@ api.interceptors.response.use(
     })
 
     if (error.response?.status === 401) {
+      console.log('🔒 Authentication failed - redirecting to login')
       // Token expired or invalid
       const authStore = useAuthStore()
       authStore.logout()
