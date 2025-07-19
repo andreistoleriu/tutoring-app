@@ -147,12 +147,20 @@ class LocationSeeder extends Seeder
         ];
 
         foreach ($locations as $location) {
-            Location::create([
-                'county' => $location['county'],
-                'city' => $location['city'],
-                'slug' => Str::slug($location['city'] . '-' . $location['county']),
-                'is_active' => true,
-            ]);
+            $slug = Str::slug($location['city'] . '-' . $location['county']);
+
+            // Use firstOrCreate to prevent duplicate slug errors
+            Location::firstOrCreate(
+                ['slug' => $slug], // Find by slug
+                [
+                    'county' => $location['county'],
+                    'city' => $location['city'],
+                    'slug' => $slug,
+                    'is_active' => true,
+                ]
+            );
         }
+
+        $this->command->info('✅ Locations seeded successfully!');
     }
 }

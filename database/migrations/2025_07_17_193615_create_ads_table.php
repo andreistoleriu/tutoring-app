@@ -13,16 +13,22 @@ return new class extends Migration
             $table->string('title');
             $table->text('description');
             $table->string('image_url')->nullable();
-            $table->string('link_url');
-            $table->enum('type', ['banner', 'sidebar', 'popup', 'inline']);
-            $table->enum('target_audience', ['all', 'students', 'tutors', 'trial_users']);
-            $table->integer('impressions')->default(0);
+            $table->string('click_url');
+            $table->enum('type', ['banner', 'card', 'popup']);
+            $table->enum('placement', ['header', 'sidebar', 'footer', 'feed', 'modal']);
+            $table->json('targeting')->nullable(); // Store targeting criteria
+            $table->integer('priority')->default(0);
             $table->integer('clicks')->default(0);
-            $table->decimal('ctr', 5, 2)->default(0); // Click-through rate
+            $table->integer('impressions')->default(0);
+            $table->decimal('budget', 10, 2)->nullable();
+            $table->decimal('cost_per_click', 8, 2)->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamp('starts_at')->nullable();
             $table->timestamp('ends_at')->nullable();
             $table->timestamps();
+
+            $table->index(['is_active', 'placement']);
+            $table->index(['starts_at', 'ends_at']);
         });
     }
 

@@ -55,55 +55,50 @@ class SubjectSeeder extends Seeder
                 'description' => 'Gramatică, conversație, literatură germană',
                 'icon' => 'globe'
             ],
-            [
-                'name' => 'Limba Spaniolă',
-                'description' => 'Gramatică, conversație, literatura spaniolă',
-                'icon' => 'globe'
-            ],
 
-            // Computer Science & Technology
+            // Computer Science
             [
                 'name' => 'Informatică',
-                'description' => 'Programare, algoritmi, structuri de date',
-                'icon' => 'computer'
+                'description' => 'Algoritmi, structuri de date, programare',
+                'icon' => 'monitor'
             ],
             [
                 'name' => 'Programare',
-                'description' => 'Python, Java, C++, JavaScript, web development',
+                'description' => 'Python, JavaScript, Java, C++',
                 'icon' => 'code'
             ],
             [
                 'name' => 'Baze de Date',
-                'description' => 'SQL, MySQL, PostgreSQL, design de baze de date',
+                'description' => 'SQL, MySQL, PostgreSQL, design baze de date',
                 'icon' => 'database'
             ],
 
-            // Social Sciences & Humanities
+            // Social Sciences
             [
                 'name' => 'Istorie',
-                'description' => 'Istoria României, istoria universală, istoria modernă',
-                'icon' => 'clock'
+                'description' => 'Istoria României, istoria universală',
+                'icon' => 'book'
             ],
             [
                 'name' => 'Geografie',
-                'description' => 'Geografia României, geografia fizică, geografia economică',
+                'description' => 'Geografia României, geografia continentelor',
                 'icon' => 'map'
             ],
             [
-                'name' => 'Filozofie',
-                'description' => 'Istoria filozofiei, logică, etică',
+                'name' => 'Filosofie',
+                'description' => 'Logică, etică, filosofie contemporană',
                 'icon' => 'lightbulb'
             ],
 
             // Economics & Business
             [
                 'name' => 'Economie',
-                'description' => 'Microeconomie, macroeconomie, economia României',
+                'description' => 'Microeconomie, macroeconomie, economie aplicată',
                 'icon' => 'trending-up'
             ],
             [
                 'name' => 'Contabilitate',
-                'description' => 'Contabilitate financiară, contabilitate de gestiune',
+                'description' => 'Contabilitate financiară, gestiune, audit',
                 'icon' => 'calculator'
             ],
 
@@ -150,13 +145,21 @@ class SubjectSeeder extends Seeder
         ];
 
         foreach ($subjects as $subject) {
-            Subject::create([
-                'name' => $subject['name'],
-                'slug' => Str::slug($subject['name']),
-                'description' => $subject['description'],
-                'icon' => $subject['icon'],
-                'is_active' => true,
-            ]);
+            $slug = Str::slug($subject['name']);
+
+            // Use firstOrCreate to prevent duplicate slug errors
+            Subject::firstOrCreate(
+                ['slug' => $slug], // Find by slug
+                [
+                    'name' => $subject['name'],
+                    'slug' => $slug,
+                    'description' => $subject['description'],
+                    'icon' => $subject['icon'],
+                    'is_active' => true,
+                ]
+            );
         }
+
+        $this->command->info('✅ Subjects seeded successfully!');
     }
 }

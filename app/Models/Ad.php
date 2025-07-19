@@ -13,19 +13,24 @@ class Ad extends Model
         'title',
         'description',
         'image_url',
-        'link_url',
+        'click_url',      // Your actual field name
         'type',
-        'target_audience',
+        'placement',      // Your actual field name
+        'targeting',      // Your actual field name (JSON)
+        'priority',
         'impressions',
         'clicks',
-        'ctr',
+        'budget',
+        'cost_per_click',
         'is_active',
         'starts_at',
         'ends_at',
     ];
 
     protected $casts = [
-        'ctr' => 'decimal:2',
+        'targeting' => 'array',  // Your field stores JSON
+        'budget' => 'decimal:2',
+        'cost_per_click' => 'decimal:2',
         'is_active' => 'boolean',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
@@ -45,11 +50,28 @@ class Ad extends Model
                     });
     }
 
+    public function scopeByPlacement($query, $placement)
+    {
+        return $query->where('placement', $placement);
+    }
+
+    public function scopeByType($query, $type)
+    {
+        return $query->where('type', $type);
+    }
+
+    public function scopePriority($query)
+    {
+        return $query->orderBy('priority', 'desc');
+    }
+
+    // Target audience logic using the targeting JSON field
     public function scopeForAudience($query, $audience)
     {
         return $query->where(function ($q) use ($audience) {
-            $q->where('target_audience', 'all')
-              ->orWhere('target_audience', $audience);
+            $q->where('targeting->audience', 'all')
+              ->orWhere('targeting->audience', $audience)
+              ->orWhereNull('targeting->audience'); // If no targeting specified, show to all
         });
     }
 
@@ -69,7 +91,41 @@ class Ad extends Model
     private function updateCtr(): void
     {
         if ($this->impressions > 0) {
-            $this->update(['ctr' => ($this->clicks / $this->impressions) * 100]);
+            $ctr = ($this->clicks / $this->impressions) * 100;
+            $this->update(['cost_per_click' => round($ctr, 2)]); // Using cost_per_click as CTR storage
         }
+    }
+
+    // Helper methods
+    public function getCtrPercentageAttribute()
+    {
+        if ($this->impressions > 0) {
+            return round(($this->clicks / $this->impressions) * 100, 2) . '%';
+        }
+        return '0%';
+    }
+
+    public function isExpired()
+    {
+        return $this->ends_at && $this->ends_at->isPast();
+    }
+
+    public function hasStarted()
+    {
+        return !$this->starts_at || $this->starts_at->isPast();
+    }
+
+    // Accessor for target audience from targeting JSON
+    public function getTargetAudienceAttribute()
+    {
+        return $this->targeting['audience'] ?? 'all';
+    }
+
+    // Mutator to set target audience in targeting JSON
+    public function setTargetAudienceAttribute($value)
+    {
+        $targeting = $this->targeting ?: [];
+        $targeting['audience'] = $value;
+        $this->targeting = $targeting;
     }
 }
