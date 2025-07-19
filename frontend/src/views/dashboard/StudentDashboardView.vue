@@ -11,6 +11,23 @@
             <p class="text-gray-600 mt-1">Bine ai venit în dashboard-ul tău de student</p>
           </div>
           <div class="flex items-center space-x-4">
+            <!-- Subscription Status Button -->
+            <button
+              @click="showSubscriptionModal = true"
+              class="px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 flex items-center space-x-2"
+              :class="subscriptionStore.isPremiumUser
+                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span v-if="subscriptionStore.isPremiumUser">Premium</span>
+              <span v-else-if="subscriptionStore.isTrialUser">
+                {{ subscriptionStore.trialDaysRemaining }} zile trial
+              </span>
+              <span v-else>Upgrade</span>
+            </button>
+
             <router-link to="/tutors"
               class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
               <span class="flex items-center space-x-2">
@@ -24,6 +41,20 @@
           </div>
         </div>
       </div>
+
+      <!-- Subscription Banner -->
+      <SubscriptionBanner
+        v-if="subscriptionStore.shouldShowAds"
+        @upgrade="showSubscriptionModal = true"
+        class="mb-8"
+      />
+
+      <!-- Ad Banner -->
+      <AdBanner
+        v-if="adsStore.bannerAds.length > 0 && subscriptionStore.shouldShowAds"
+        :ad="adsStore.bannerAds[0]"
+        class="mb-8"
+      />
 
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
@@ -387,6 +418,12 @@
               </div>
             </div>
 
+            <!-- Inline Ad -->
+            <AdInline
+              v-if="adsStore.inlineAds.length > 0 && subscriptionStore.shouldShowAds"
+              :ad="adsStore.inlineAds[0]"
+            />
+
             <!-- ENHANCED Recent Lessons Section -->
             <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-4 sm:p-6">
               <!-- Header -->
@@ -617,8 +654,22 @@
             </div>
           </div>
 
-          <!-- Right Column - Tips & Activity -->
+          <!-- Right Column - Subscription Status, Tips & Activity -->
           <div class="space-y-6">
+            <!-- Subscription Status Card -->
+            <SubscriptionStatus
+              @upgrade="showSubscriptionModal = true"
+              @manage="showSubscriptionModal = true"
+            />
+
+            <!-- Sidebar Ads -->
+            <AdSidebar
+              v-for="ad in adsStore.sidebarAds"
+              :key="ad.id"
+              :ad="ad"
+              v-show="subscriptionStore.shouldShowAds"
+            />
+
             <!-- Daily Tip -->
             <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
               <h3 class="text-lg font-bold mb-3 flex items-center">
@@ -742,6 +793,12 @@
                   <span class="text-gray-600">Review-uri de scris</span>
                   <span class="font-semibold text-yellow-600">{{ dashboardData?.stats?.pending_reviews || 0 }}</span>
                 </div>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-600">Abonament</span>
+                  <span class="font-semibold" :class="subscriptionStore.isPremiumUser ? 'text-green-600' : 'text-yellow-600'">
+                    {{ subscriptionStore.isPremiumUser ? 'Premium' : 'Trial' }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -750,6 +807,14 @@
     </div>
   </div>
 
+  <!-- Subscription Modal -->
+  <SubscriptionModal
+    :show="showSubscriptionModal"
+    @close="showSubscriptionModal = false"
+    @upgraded="handleSubscriptionUpgraded"
+  />
+
+  <!-- Review Modal -->
   <ReviewModal
     v-if="showReviewModal"
     :booking="selectedBookingForReview"
@@ -765,12 +830,22 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useStudentStore } from '@/stores/student'
+import { useSubscriptionStore } from '@/stores/subscription'
+import { useAdsStore } from '@/stores/ads'
 import api from '@/services/api'
 import ReviewModal from '@/components/ReviewModal.vue'
+import SubscriptionModal from '@/components/subscription/SubscriptionModal.vue'
+import SubscriptionStatus from '@/components/subscription/SubscriptionStatus.vue'
+import SubscriptionBanner from '@/components/subscription/SubscriptionBanner.vue'
+import AdBanner from '@/components/ads/AdBanner.vue'
+import AdSidebar from '@/components/ads/AdSidebar.vue'
+import AdInline from '@/components/ads/AdInline.vue'
 
 // Composables
 const authStore = useAuthStore()
 const studentStore = useStudentStore()
+const subscriptionStore = useSubscriptionStore()
+const adsStore = useAdsStore()
 const router = useRouter()
 
 // Reactive data
@@ -784,6 +859,7 @@ const recentBookings = ref([])
 const showSpendingModal = ref(false)
 const showReviewModal = ref(false)
 const selectedBookingForReview = ref(null)
+const showSubscriptionModal = ref(false)
 
 // Reminder system state
 const upcomingReminders = ref([])
@@ -859,15 +935,12 @@ const handleImageError = (event) => {
   event.target.parentElement.classList.add('border-2', 'border-gray-300')
 }
 
-
-
 const loadUpcomingReminders = async () => {
   loadingReminders.value = true
 
   try {
     console.log('🔔 Loading upcoming reminders from API...')
 
-    // Correct API call - uses /api/v1/reminders (not double path)
     const response = await api.get('/reminders', {
       params: {
         limit: 5,
@@ -889,7 +962,6 @@ const loadUpcomingReminders = async () => {
 
     if (error.response?.status === 401) {
       console.log('🔒 User not authenticated - need to login')
-      // Handle gracefully - user needs to log in
       upcomingReminders.value = []
     } else if (error.response?.status === 500) {
       console.error('💥 Server error:', error.response?.data)
@@ -905,9 +977,6 @@ const loadUpcomingReminders = async () => {
   }
 }
 
-/**
- * Format reminder time in a user-friendly way
- */
 const formatReminderTime = (reminder) => {
   const now = new Date()
   const reminderTime = new Date(reminder.scheduled_at)
@@ -939,13 +1008,9 @@ const formatReminderTime = (reminder) => {
   }
 }
 
-/**
- * Handle reminder click - navigate to relevant page
- */
 const handleReminderClick = async (reminder) => {
   console.log('📋 Reminder clicked:', reminder)
 
-  // Mark as read if needed (only if API is available)
   if (!reminder.is_read && reminder.id && process.env.NODE_ENV !== 'development') {
     try {
       await api.post(`reminders/${reminder.id}/mark-read`)
@@ -954,7 +1019,6 @@ const handleReminderClick = async (reminder) => {
     }
   }
 
-  // Navigate based on reminder type
   if (reminder.booking_id) {
     switch (reminder.type) {
       case 'lesson_reminder_student':
@@ -971,16 +1035,12 @@ const handleReminderClick = async (reminder) => {
   }
 }
 
-/**
- * View all reminders
- */
 const viewAllReminders = () => {
   router.push('/notifications')
 }
 
 // ENHANCED HELPER FUNCTIONS FOR RECENT LESSONS
 const handleRepeatLesson = (lesson) => {
-  // Navigate to tutor's booking page with pre-selected subject
   router.push({
     name: 'tutor-detail',
     params: { id: lesson.tutor_id },
@@ -992,16 +1052,10 @@ const handleRepeatLesson = (lesson) => {
 }
 
 const handleContactTutor = (lesson) => {
-  // You can implement this based on your messaging system
-  // For now, we'll show an alert, but you should implement proper messaging
   alert(`Contact ${getTutorName(lesson.tutor)} pentru ${lesson.subject?.name || 'lecție'}`)
-
-  // Or redirect to a contact/messaging page:
-  // router.push({ name: 'messages', query: { tutor_id: lesson.tutor_id } })
 }
 
 const handleViewLessonDetails = (lesson) => {
-  // Navigate to booking details page
   router.push({
     name: 'booking-details',
     params: { id: lesson.id }
@@ -1058,7 +1112,6 @@ const getPendingReviewsText = () => {
 }
 
 const getThisMonthSpending = () => {
-  // Estimate this month's spending based on this month's bookings
   const thisMonthBookings = dashboardData.value?.stats?.this_month_bookings || dashboardData.value?.stats?.this_month || 0
   const avgPerLesson = getAveragePerLessonValue()
   const estimated = thisMonthBookings * avgPerLesson
@@ -1079,13 +1132,10 @@ const navigateToBookings = (filter = 'all') => {
       break
     case 'all':
     default:
-      // No filter
       break
   }
 
-  // Close spending modal if open
   showSpendingModal.value = false
-
   router.push({
     name: 'student-bookings',
     query
@@ -1187,8 +1237,6 @@ const getDisplayedMonthlyCount = () => {
   const thisMonthScheduled = getThisMonthScheduledBookings()
   const thisMonthFromAPI = dashboardData.value?.stats?.this_month_bookings || dashboardData.value?.stats?.this_month || 0
 
-  // If we have upcoming bookings data, count those scheduled for this month
-  // Otherwise, fall back to API data (bookings created this month)
   return upcomingBookings.value.length > 0 ? thisMonthScheduled : thisMonthFromAPI
 }
 
@@ -1225,24 +1273,20 @@ const loadDashboardData = async () => {
   try {
     console.log('🔄 Loading dashboard data...')
 
-    // Try to use studentStore first
     if (studentStore.getDashboard) {
       const response = await studentStore.getDashboard()
       dashboardData.value = response
       upcomingBookings.value = response.upcoming_bookings || []
       recentBookings.value = response.recent_bookings || []
     } else {
-      // Fallback to direct API call
       const response = await api.get('student/dashboard')
       dashboardData.value = response.data
       upcomingBookings.value = response.data.upcoming_bookings || []
       recentBookings.value = response.data.recent_bookings || []
     }
 
-    // Ensure recent bookings have proper structure for ReviewModal
     recentBookings.value = recentBookings.value.map(booking => ({
       ...booking,
-      // Ensure tutor object has the structure ReviewModal expects
       tutor: {
         ...booking.tutor,
         user: booking.tutor?.user || {
@@ -1252,15 +1296,12 @@ const loadDashboardData = async () => {
           full_name: getTutorName(booking.tutor)
         }
       },
-      // Ensure subject object exists
       subject: booking.subject || { name: 'Necunoscut', icon: '📚' },
-      // Review flags
       has_review: !!booking.review,
       can_review: booking.status === 'completed' && !booking.review,
       needs_review: booking.status === 'completed' && !booking.review
     }))
 
-    // Also load reminders
     await loadUpcomingReminders()
 
     console.log('✅ Dashboard data loaded:', {
@@ -1268,14 +1309,13 @@ const loadDashboardData = async () => {
       recent: recentBookings.value.length,
       reminders: upcomingReminders.value.length,
       stats: dashboardData.value?.stats,
-      recentBookingsStructure: recentBookings.value[0] // Log first item to check structure
+      recentBookingsStructure: recentBookings.value[0]
     })
 
   } catch (err) {
     console.error('❌ Error loading dashboard:', err)
     error.value = err.response?.data?.message || 'Eroare la încărcarea dashboard-ului'
 
-    // Set empty fallback data
     dashboardData.value = {
       stats: {
         total_lessons: 0,
@@ -1313,7 +1353,6 @@ const cancelBooking = async (bookingId) => {
       })
     }
 
-    // Reload dashboard data
     await loadDashboardData()
     alert('Rezervarea a fost anulată cu succes!')
 
@@ -1326,7 +1365,6 @@ const cancelBooking = async (bookingId) => {
 const openReviewModal = (booking) => {
   console.log('🌟 Opening review modal for booking:', booking)
 
-  // Ensure we have the booking data in the correct format that ReviewModal expects
   selectedBookingForReview.value = {
     id: booking.id,
     tutor_id: booking.tutor_id || booking.tutor?.id,
@@ -1339,7 +1377,6 @@ const openReviewModal = (booking) => {
     lesson_type: booking.lesson_type,
     student_notes: booking.student_notes || '',
     tutor_notes: booking.tutor_notes || '',
-    // Tutor information in the expected format
     tutor: {
       id: booking.tutor_id || booking.tutor?.id,
       user_id: booking.tutor?.user_id || booking.tutor?.id,
@@ -1348,7 +1385,6 @@ const openReviewModal = (booking) => {
       full_name: getTutorName(booking.tutor),
       profile_image: booking.tutor?.profile_image,
       rating: booking.tutor?.rating || 0,
-      // Include user object if ReviewModal expects it
       user: {
         id: booking.tutor?.user_id || booking.tutor?.id,
         first_name: booking.tutor?.first_name || booking.tutor?.user?.first_name || getTutorName(booking.tutor).split(' ')[0] || 'Tutor',
@@ -1356,13 +1392,11 @@ const openReviewModal = (booking) => {
         full_name: getTutorName(booking.tutor)
       }
     },
-    // Subject information
     subject: {
       id: booking.subject?.id,
       name: booking.subject?.name || 'Necunoscut',
       icon: booking.subject?.icon || '📚'
     },
-    // Review information
     review: booking.review || null,
     has_review: booking.has_review || !!booking.review,
     can_review: booking.status === 'completed' && !booking.review && !booking.has_review,
@@ -1383,10 +1417,8 @@ const handleReviewSuccess = async (reviewData) => {
   console.log('✅ Review submitted successfully:', reviewData)
 
   try {
-    // Update the local state to reflect the new review
     const bookingId = selectedBookingForReview.value?.id
     if (bookingId) {
-      // Update in recent bookings
       const recentIndex = recentBookings.value.findIndex(b => b.id === bookingId)
       if (recentIndex !== -1) {
         recentBookings.value[recentIndex] = {
@@ -1398,20 +1430,13 @@ const handleReviewSuccess = async (reviewData) => {
         }
       }
 
-      // Update dashboard stats
       if (dashboardData.value?.stats) {
         dashboardData.value.stats.pending_reviews = Math.max(0, (dashboardData.value.stats.pending_reviews || 1) - 1)
       }
     }
 
-    // Close modal
     closeReviewModal()
-
-    // Show success message
     alert('Review-ul a fost trimis cu succes! Mulțumim pentru feedback.')
-
-    // Optionally reload dashboard data to get fresh stats
-    // await loadDashboardData()
 
   } catch (error) {
     console.error('❌ Error handling review success:', error)
@@ -1419,10 +1444,20 @@ const handleReviewSuccess = async (reviewData) => {
   }
 }
 
+const handleSubscriptionUpgraded = () => {
+  showSubscriptionModal.value = false
+  subscriptionStore.getSubscription()
+  adsStore.getAds()
+}
+
 // Lifecycle
 onMounted(async () => {
   console.log('🚀 StudentDashboardView mounted')
-  await loadDashboardData()
+  await Promise.all([
+    loadDashboardData(),
+    subscriptionStore.getSubscription(),
+    adsStore.getAds()
+  ])
 })
 </script>
 

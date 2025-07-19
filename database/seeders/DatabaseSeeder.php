@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             LocationSeeder::class,
             TutorSeeder::class,
             StudentTestDataSeeder::class,
+            AdsSeeder::class,
         ]);
     }
 }

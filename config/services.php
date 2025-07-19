@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'netopia' => [
+    'api_key' => env('NETOPIA_API_KEY'),
+    'pos_signature' => env('NETOPIA_POS_SIGNATURE'),
+    'base_url' => env('NETOPIA_BASE_URL', 'https://secure.netopia-payments.com'),
+    ],
+
 ];

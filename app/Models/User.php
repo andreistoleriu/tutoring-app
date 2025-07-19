@@ -82,11 +82,6 @@ class User extends Authenticatable
         return $this->hasMany(Availability::class, 'tutor_id');
     }
 
-    public function subscription(): HasOne
-    {
-        return $this->hasOne(Subscription::class, 'tutor_id');
-    }
-
     public function reminders(): HasMany
     {
         return $this->hasMany(Reminder::class);
@@ -118,4 +113,43 @@ class User extends Authenticatable
             'reminder_hours_before' => 24,
         ]);
     }
+    // Add these relationships to the User model
+        public function subscription(): HasOne
+        {
+            return $this->hasOne(Subscription::class)->latest();
+        }
+
+        public function activeSubscription(): HasOne
+        {
+            return $this->hasOne(Subscription::class)->where('status', 'active');
+        }
+
+        public function payments(): HasMany
+        {
+            return $this->hasMany(Payment::class);
+        }
+
+        // Add helper methods
+        public function hasActiveSubscription(): bool
+        {
+            return $this->activeSubscription()->exists();
+        }
+
+        public function isInTrial(): bool
+        {
+            $subscription = $this->activeSubscription;
+            return $subscription && $subscription->isInTrial();
+        }
+
+        public function shouldShowAds(): bool
+        {
+            $subscription = $this->activeSubscription;
+            return !$subscription || $subscription->shouldShowAds();
+        }
+
+        public function canAccessPremiumFeatures(): bool
+        {
+            $subscription = $this->activeSubscription;
+            return $subscription && $subscription->plan_type === 'premium' && $subscription->isActive();
+        }
 }

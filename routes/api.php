@@ -133,7 +133,32 @@ Route::prefix('v1')->group(function () {
         Route::get('/', [NotificationPreferenceController::class, 'show']);
         Route::put('/', [NotificationPreferenceController::class, 'update']);
     });
+
+
+    // Subscription routes
+        Route::prefix('subscription')->group(function () {
+            Route::get('/', [SubscriptionController::class, 'index']);
+            Route::post('upgrade', [SubscriptionController::class, 'upgrade']);
+            Route::post('cancel', [SubscriptionController::class, 'cancel']);
+            Route::get('plans', [SubscriptionController::class, 'plans']);
+        });
+
+        // Payment routes
+        Route::prefix('payment')->group(function () {
+            Route::post('subscription', [PaymentController::class, 'createSubscriptionPayment']);
+            Route::get('{paymentId}/status', [PaymentController::class, 'getPaymentStatus']);
+        });
+
+        // Ad routes
+        Route::prefix('ads')->group(function () {
+            Route::get('/', [AdController::class, 'getAds']);
+            Route::post('{adId}/click', [AdController::class, 'recordClick']);
+        });
     });
+
+    // Public webhook route (no auth required)
+    Route::post('payment/webhook', [PaymentController::class, 'webhook']);
+    Route::get('payment/{paymentId}/success', [PaymentController::class, 'success'])->name('payment.success');
 });
 
 // Fallback route for API

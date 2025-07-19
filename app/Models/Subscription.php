@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Carbon\Carbon;
 
 class Subscription extends Model
@@ -12,14 +13,16 @@ class Subscription extends Model
     use HasFactory;
 
     protected $fillable = [
-        'tutor_id',
+        'user_id',
         'plan_type',
         'price',
+        'currency',
         'status',
         'started_at',
         'expires_at',
         'trial_ends_at',
-        'stripe_subscription_id',
+        'shows_ads',
+        'netopia_subscription_id',
         'cancellation_reason',
         'cancelled_at',
     ];
@@ -30,49 +33,49 @@ class Subscription extends Model
         'expires_at' => 'datetime',
         'trial_ends_at' => 'datetime',
         'cancelled_at' => 'datetime',
+        'shows_ads' => 'boolean',
     ];
 
     const PLANS = [
         'free_trial' => [
-            'name' => 'Free Trial',
+            'name' => 'Free Trial with Ads',
             'price' => 0,
             'duration_days' => 14,
+            'shows_ads' => true,
             'features' => [
-                'Up to 5 bookings per month',
-                'Basic profile',
-                'Email support'
-            ]
-        ],
-        'basic' => [
-            'name' => 'Basic Plan',
-            'price' => 29.99,
-            'duration_days' => 30,
-            'features' => [
-                'Unlimited bookings',
-                'Enhanced profile',
-                'Priority support',
-                'Basic analytics'
+                'Full access to platform',
+                'Connect with tutors/students',
+                'Basic messaging',
+                'Ads displayed'
             ]
         ],
         'premium' => [
-            'name' => 'Premium Plan',
-            'price' => 49.99,
+            'name' => 'Premium - Ad Free',
+            'price' => 3.49,
             'duration_days' => 30,
+            'shows_ads' => false,
             'features' => [
-                'Everything in Basic',
-                'Featured profile',
-                'Advanced analytics',
-                'Custom branding',
-                'Priority listing'
+                'All Free Trial features',
+                'No advertisements',
+                'Priority support',
+                'Advanced search filters',
+                'Unlimited messaging'
             ]
         ]
     ];
 
-    public function tutor(): BelongsTo
+    // Relationships
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'tutor_id');
+        return $this->belongsTo(User::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    // Helper methods
     public function getPlanConfigAttribute(): array
     {
         return self::PLANS[$this->plan_type] ?? [];
@@ -91,7 +94,7 @@ class Subscription extends Model
     public function isActive(): bool
     {
         return $this->status === 'active' &&
-               $this->expires_at && $this->expires_at->isFuture();
+               (!$this->expires_at || $this->expires_at->isFuture());
     }
 
     public function isInTrial(): bool
@@ -108,12 +111,20 @@ class Subscription extends Model
 
     public function trialHasExpired(): bool
     {
-        return $this->trial_ends_at &&
-               $this->trial_ends_at->isPast();
+        return $this->trial_ends_at && $this->trial_ends_at->isPast();
+    }
+
+    public function shouldShowAds(): bool
+    {
+        return $this->shows_ads && $this->isActive();
     }
 
     public function getDaysRemainingAttribute(): int
     {
+        if ($this->isInTrial()) {
+            return $this->trial_days_remaining;
+        }
+
         if (!$this->expires_at || $this->hasExpired()) {
             return 0;
         }
@@ -130,6 +141,18 @@ class Subscription extends Model
         return max(0, now()->diffInDays($this->trial_ends_at, false));
     }
 
+    public function upgradeToPremium(): self
+    {
+        $this->update([
+            'plan_type' => 'premium',
+            'price' => self::PLANS['premium']['price'],
+            'shows_ads' => false,
+            'expires_at' => now()->addDays(30),
+        ]);
+
+        return $this;
+    }
+
     public function cancel(string $reason = null): bool
     {
         return $this->update([
@@ -139,10 +162,10 @@ class Subscription extends Model
         ]);
     }
 
-    public function renew(int $days = null): bool
+    public function renew(): bool
     {
         $planConfig = $this->plan_config;
-        $renewalDays = $days ?? $planConfig['duration_days'] ?? 30;
+        $renewalDays = $planConfig['duration_days'] ?? 30;
 
         return $this->update([
             'status' => 'active',
@@ -155,8 +178,7 @@ class Subscription extends Model
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('status', 'active')
-                    ->where('expires_at', '>', now());
+        return $query->where('status', 'active');
     }
 
     public function scopeExpired($query)
@@ -169,6 +191,11 @@ class Subscription extends Model
         return $query->where('plan_type', 'free_trial');
     }
 
+    public function scopePremium($query)
+    {
+        return $query->where('plan_type', 'premium');
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -176,6 +203,7 @@ class Subscription extends Model
         static::creating(function ($subscription) {
             if ($subscription->plan_type === 'free_trial' && $subscription->started_at) {
                 $subscription->trial_ends_at = $subscription->started_at->addDays(14);
+                $subscription->expires_at = $subscription->started_at->addDays(14);
             }
         });
     }

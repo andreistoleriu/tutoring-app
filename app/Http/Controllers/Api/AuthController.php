@@ -15,7 +15,7 @@ use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
-    public function register(Request $request): JsonResponse
+public function register(Request $request): JsonResponse
 {
     $validated = $request->validate([
         'first_name' => ['required', 'string', 'max:50'],
@@ -24,7 +24,7 @@ class AuthController extends Controller
         'phone' => ['nullable', 'string'],
         'password' => ['required', 'confirmed', 'min:8'],
         'user_type' => ['required', 'in:student,tutor'],
-        'location_id' => ['nullable', 'exists:locations,id'], // Make this nullable for students
+        'location_id' => ['nullable', 'exists:locations,id'],
         'terms_accepted' => ['required', 'accepted'],
         'privacy_accepted' => ['required', 'accepted'],
     ]);
@@ -39,23 +39,24 @@ class AuthController extends Controller
         'user_type' => $validated['user_type'],
     ]);
 
-    // If user is a tutor, create tutor profile and free trial subscription
-    if ($user->isTutor()) {
-        $tutor = Tutor::create([
-            'user_id' => $user->id,
-            'location_id' => $validated['location_id'] ?? 1, // Default location if not provided
-            'hourly_rate' => 0, // Will be set during profile setup
-        ]);
+    // Create 14-day free trial subscription for all users
+    Subscription::create([
+        'user_id' => $user->id,
+        'plan_type' => 'free_trial',
+        'price' => 0,
+        'status' => 'active',
+        'started_at' => now(),
+        'trial_ends_at' => now()->addDays(14),
+        'expires_at' => now()->addDays(14),
+        'shows_ads' => true,
+    ]);
 
-        // Create free trial subscription
-        Subscription::create([
-            'tutor_id' => $user->id,
-            'plan_type' => 'free_trial',
-            'price' => 0,
-            'status' => 'active',
-            'started_at' => now(),
-            'expires_at' => now()->addDays(14),
-            'trial_ends_at' => now()->addDays(14),
+    // If user is a tutor, create tutor profile
+    if ($user->isTutor()) {
+        Tutor::create([
+            'user_id' => $user->id,
+            'location_id' => $validated['location_id'] ?? 1,
+            'hourly_rate' => 0, // Will be set during profile setup
         ]);
     }
 
@@ -76,6 +77,11 @@ class AuthController extends Controller
         ],
         'token' => $token,
         'token_type' => 'Bearer',
+        'subscription' => [
+            'plan_type' => 'free_trial',
+            'days_remaining' => 14,
+            'shows_ads' => true,
+        ],
     ], 201);
 }
 
