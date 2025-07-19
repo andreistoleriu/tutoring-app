@@ -14,18 +14,11 @@
             <!-- Subscription Status Button -->
             <button
               @click="showSubscriptionModal = true"
-              class="px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 flex items-center space-x-2"
-              :class="subscriptionStore.isPremiumUser
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'">
+              class="px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 flex items-center space-x-2 bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span v-if="subscriptionStore.isPremiumUser">Premium</span>
-              <span v-else-if="subscriptionStore.isTrialUser">
-                {{ subscriptionStore.trialDaysRemaining }} zile trial
-              </span>
-              <span v-else>Upgrade</span>
+              <span>{{ trialDaysRemaining }} zile trial</span>
             </button>
 
             <router-link to="/tutors"
@@ -41,20 +34,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Subscription Banner -->
-      <SubscriptionBanner
-        v-if="subscriptionStore.shouldShowAds"
-        @upgrade="showSubscriptionModal = true"
-        class="mb-8"
-      />
-
-      <!-- Ad Banner -->
-      <AdBanner
-        v-if="adsStore.bannerAds.length > 0 && subscriptionStore.shouldShowAds"
-        :ad="adsStore.bannerAds[0]"
-        class="mb-8"
-      />
 
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
@@ -108,7 +87,7 @@
           </div>
         </div>
 
-        <!-- ENHANCED Stats Cards -->
+        <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <!-- Total Lessons -->
           <div
@@ -223,63 +202,6 @@
               <!-- Notification Dot -->
               <div v-if="(dashboardData?.stats?.pending_reviews || 0) > 0"
                 class="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full animate-pulse">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Spending Breakdown Modal -->
-        <div v-if="showSpendingModal"
-          class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          @click="showSpendingModal = false">
-          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
-            <div class="p-6">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Detalii cheltuieli</h3>
-                <button @click="showSpendingModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
-                  </svg>
-                </button>
-              </div>
-
-              <div class="space-y-4">
-                <!-- Total Spent -->
-                <div class="bg-purple-50 rounded-xl p-4">
-                  <div class="flex justify-between items-center">
-                    <span class="font-medium text-gray-700">Total investit</span>
-                    <span class="text-xl font-bold text-purple-600">{{ formatCurrency(dashboardData?.stats?.total_spent
-                      || 0) }}</span>
-                  </div>
-                </div>
-
-                <!-- Breakdown -->
-                <div class="space-y-3">
-                  <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                    <span class="text-gray-600">Lecții finalizate</span>
-                    <span class="font-medium">{{ dashboardData?.stats?.completed_lessons ||
-                      dashboardData?.stats?.total_lessons || 0 }}</span>
-                  </div>
-                  <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                    <span class="text-gray-600">Cost mediu/lecție</span>
-                    <span class="font-medium">{{ getAveragePerLesson() }}</span>
-                  </div>
-                  <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                    <span class="text-gray-600">Luna aceasta</span>
-                    <span class="font-medium">{{ getThisMonthSpending() }}</span>
-                  </div>
-                  <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                    <span class="text-gray-600">Review-uri restante</span>
-                    <span class="font-medium text-yellow-600">{{ dashboardData?.stats?.pending_reviews || 0 }}</span>
-                  </div>
-                </div>
-
-                <!-- Action Button -->
-                <button @click="navigateToBookings('all')"
-                  class="w-full bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 transition-colors font-medium">
-                  Vezi toate rezervările
-                </button>
               </div>
             </div>
           </div>
@@ -404,29 +326,11 @@
                     </button>
                   </div>
                 </div>
-
-                <!-- View All Link (when there are bookings) -->
-                <div v-if="upcomingBookings.length >= 3" class="text-center pt-4 border-t border-gray-100">
-                  <router-link to="/student/bookings"
-                    class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center justify-center space-x-1">
-                    <span>Vezi toate rezervările</span>
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                  </router-link>
-                </div>
               </div>
             </div>
 
-            <!-- Inline Ad -->
-            <AdInline
-              v-if="adsStore.inlineAds.length > 0 && subscriptionStore.shouldShowAds"
-              :ad="adsStore.inlineAds[0]"
-            />
-
-            <!-- ENHANCED Recent Lessons Section -->
+            <!-- Recent Lessons -->
             <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-4 sm:p-6">
-              <!-- Header -->
               <div class="flex items-center justify-between mb-4 sm:mb-6">
                 <h2 class="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
                   <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -466,7 +370,7 @@
               <!-- Recent Lessons List -->
               <div v-else class="space-y-3">
                 <div
-                  v-for="lesson in recentBookings"
+                  v-for="lesson in recentBookings.slice(0, 5)"
                   :key="lesson.id"
                   class="group bg-white border border-gray-200 rounded-xl p-3 sm:p-4 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
                   @click="handleViewLessonDetails(lesson)"
@@ -589,100 +493,28 @@
                       </div>
                     </div>
                   </div>
-
-                  <!-- Mobile Quick Actions Bar -->
-                  <div class="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center sm:hidden">
-                    <button
-                      @click.stop="handleRepeatLesson(lesson)"
-                      class="flex items-center space-x-1 text-xs text-purple-600 hover:text-purple-700 font-medium"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                      </svg>
-                      <span>Repetă</span>
-                    </button>
-
-                    <button
-                      v-if="lesson.status === 'completed' && !lesson.review && !lesson.has_review"
-                      @click.stop="openReviewModal(lesson)"
-                      class="flex items-center space-x-1 text-xs text-yellow-600 hover:text-yellow-700 font-medium"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-                      </svg>
-                      <span>Review</span>
-                    </button>
-
-                    <button
-                      @click.stop="handleContactTutor(lesson)"
-                      class="flex items-center space-x-1 text-xs text-gray-600 hover:text-gray-700 font-medium"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                      </svg>
-                      <span>Contact</span>
-                    </button>
-
-                    <button
-                      @click.stop="handleViewLessonDetails(lesson)"
-                      class="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                      </svg>
-                      <span>Detalii</span>
-                    </button>
-                  </div>
                 </div>
-              </div>
 
-              <!-- View All Button (Mobile) -->
-              <router-link
-                v-if="recentBookings?.length"
-                to="/student/bookings"
-                class="w-full mt-4 py-3 border-2 border-purple-200 text-purple-600 rounded-xl hover:bg-purple-50 transition-colors font-medium sm:hidden flex items-center justify-center space-x-2"
-              >
-                <span>Vezi toate lecțiile</span>
-                <span v-if="dashboardData?.stats?.total_lessons" class="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-bold">
-                  {{ dashboardData.stats.total_lessons }}
-                </span>
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-              </router-link>
+                <!-- View All Button (Mobile) -->
+                <router-link
+                  v-if="recentBookings?.length"
+                  to="/student/bookings"
+                  class="w-full mt-4 py-3 border-2 border-purple-200 text-purple-600 rounded-xl hover:bg-purple-50 transition-colors font-medium sm:hidden flex items-center justify-center space-x-2"
+                >
+                  <span>Vezi toate lecțiile</span>
+                  <span v-if="dashboardData?.stats?.total_lessons" class="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-bold">
+                    {{ dashboardData.stats.total_lessons }}
+                  </span>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </router-link>
+              </div>
             </div>
           </div>
 
-          <!-- Right Column - Subscription Status, Tips & Activity -->
+          <!-- Right Column - Quick Stats & Tips -->
           <div class="space-y-6">
-            <!-- Subscription Status Card -->
-            <SubscriptionStatus
-              @upgrade="showSubscriptionModal = true"
-              @manage="showSubscriptionModal = true"
-            />
-
-            <!-- Sidebar Ads -->
-            <AdSidebar
-              v-for="ad in adsStore.sidebarAds"
-              :key="ad.id"
-              :ad="ad"
-              v-show="subscriptionStore.shouldShowAds"
-            />
-
-            <!-- Daily Tip -->
-            <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
-              <h3 class="text-lg font-bold mb-3 flex items-center">
-                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
-                  </path>
-                </svg>
-                Sfat pentru învățare
-              </h3>
-              <p class="text-blue-100 leading-relaxed">{{ currentTip }}</p>
-            </div>
-
             <!-- Active Reminders Section -->
             <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-6">
               <!-- Header with Warning Icon -->
@@ -776,6 +608,19 @@
               </div>
             </div>
 
+            <!-- Daily Tip -->
+            <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+              <h3 class="text-lg font-bold mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z">
+                  </path>
+                </svg>
+                Sfat pentru învățare
+              </h3>
+              <p class="text-blue-100 leading-relaxed">{{ currentTip }}</p>
+            </div>
+
             <!-- Quick Stats -->
             <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Statistici rapide</h3>
@@ -795,10 +640,57 @@
                 </div>
                 <div class="flex justify-between items-center">
                   <span class="text-gray-600">Abonament</span>
-                  <span class="font-semibold" :class="subscriptionStore.isPremiumUser ? 'text-green-600' : 'text-yellow-600'">
-                    {{ subscriptionStore.isPremiumUser ? 'Premium' : 'Trial' }}
-                  </span>
+                  <span class="font-semibold text-yellow-600">Trial</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Spending Modal -->
+        <div v-if="showSpendingModal"
+          class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          @click="showSpendingModal = false">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
+            <div class="p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Detalii cheltuieli</h3>
+                <button @click="showSpendingModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="space-y-4">
+                <!-- Total Spent -->
+                <div class="bg-purple-50 rounded-xl p-4">
+                  <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-700">Total investit</span>
+                    <span class="text-xl font-bold text-purple-600">{{ formatCurrency(dashboardData?.stats?.total_spent
+                      || 0) }}</span>
+                  </div>
+                </div>
+
+                <!-- Breakdown -->
+                <div class="space-y-3">
+                  <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span class="text-gray-600">Lecții finalizate</span>
+                    <span class="font-medium">{{ dashboardData?.stats?.completed_lessons ||
+                      dashboardData?.stats?.total_lessons || 0 }}</span>
+                  </div>
+                  <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span class="text-gray-600">Cost mediu/lecție</span>
+                    <span class="font-medium">{{ getAveragePerLesson() }}</span>
+                  </div>
+                </div>
+
+                <!-- Action Button -->
+                <button @click="navigateToBookings('all')"
+                  class="w-full bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 transition-colors font-medium">
+                  Vezi toate rezervările
+                </button>
               </div>
             </div>
           </div>
@@ -807,12 +699,35 @@
     </div>
   </div>
 
-  <!-- Subscription Modal -->
-  <SubscriptionModal
-    :show="showSubscriptionModal"
-    @close="showSubscriptionModal = false"
-    @upgraded="handleSubscriptionUpgraded"
-  />
+  <!-- Simple Subscription Modal -->
+  <div v-if="showSubscriptionModal"
+    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+    @click="showSubscriptionModal = false">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-900">Upgrade la Premium</h3>
+          <button @click="showSubscriptionModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+              </path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <div class="text-center py-8">
+            <h4 class="text-xl font-bold text-gray-900 mb-4">Funcționalitate în dezvoltare</h4>
+            <p class="text-gray-600 mb-6">Sistemul de abonamente va fi disponibil curând!</p>
+            <button @click="showSubscriptionModal = false"
+              class="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium">
+              Înțeles
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Review Modal -->
   <ReviewModal
@@ -830,22 +745,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useStudentStore } from '@/stores/student'
-import { useSubscriptionStore } from '@/stores/subscription'
-import { useAdsStore } from '@/stores/ads'
 import api from '@/services/api'
 import ReviewModal from '@/components/ReviewModal.vue'
-import SubscriptionModal from '@/components/subscription/SubscriptionModal.vue'
-import SubscriptionStatus from '@/components/subscription/SubscriptionStatus.vue'
-import SubscriptionBanner from '@/components/subscription/SubscriptionBanner.vue'
-import AdBanner from '@/components/ads/AdBanner.vue'
-import AdSidebar from '@/components/ads/AdSidebar.vue'
-import AdInline from '@/components/ads/AdInline.vue'
 
 // Composables
 const authStore = useAuthStore()
 const studentStore = useStudentStore()
-const subscriptionStore = useSubscriptionStore()
-const adsStore = useAdsStore()
 const router = useRouter()
 
 // Reactive data
@@ -855,7 +760,7 @@ const dashboardData = ref(null)
 const upcomingBookings = ref([])
 const recentBookings = ref([])
 
-// Enhanced functionality state
+// State
 const showSpendingModal = ref(false)
 const showReviewModal = ref(false)
 const selectedBookingForReview = ref(null)
@@ -865,6 +770,9 @@ const showSubscriptionModal = ref(false)
 const upcomingReminders = ref([])
 const loadingReminders = ref(false)
 const totalRemindersCount = ref(0)
+
+// Simple trial state
+const trialDaysRemaining = ref(14)
 
 // Learning tips
 const tips = [
@@ -883,7 +791,114 @@ const currentTip = computed(() => {
   return tips[tipIndex]
 })
 
-// ENHANCED HELPER FUNCTIONS FOR RECENT LESSONS
+// Helper functions
+const formatNumber = (num) => {
+  return new Intl.NumberFormat('ro-RO').format(num || 0)
+}
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('ro-RO', {
+    style: 'currency',
+    currency: 'RON',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount || 0)
+}
+
+const getPluralText = (count, singular, plural) => {
+  return count === 1 ? singular : plural
+}
+
+const getMonthlyGrowthText = () => {
+  const thisMonth = dashboardData.value?.stats?.this_month_bookings || dashboardData.value?.stats?.this_month || 0
+  if (thisMonth === 0) return 'Nicio rezervare încă'
+  if (thisMonth === 1) return 'Prima rezervare din lună'
+  return `+${thisMonth - 1} față de începutul lunii`
+}
+
+const getAveragePerLessonText = () => {
+  const average = getAveragePerLessonValue()
+  if (average === 0) return 'Nicio lecție plătită încă'
+  return `~${formatCurrency(average)}/lecție`
+}
+
+const getAveragePerLesson = () => {
+  const average = getAveragePerLessonValue()
+  return formatCurrency(average)
+}
+
+const getAveragePerLessonValue = () => {
+  const completed = dashboardData.value?.stats?.completed_lessons || dashboardData.value?.stats?.total_lessons || 0
+  const spent = dashboardData.value?.stats?.total_spent || 0
+  return completed > 0 ? Math.round(spent / completed) : 0
+}
+
+const getPendingReviewsText = () => {
+  const pending = dashboardData.value?.stats?.pending_reviews || 0
+  if (pending === 0) return 'Toate la zi!'
+  if (pending === 1) return 'Scrie un review'
+  return `${pending} review-uri de scris`
+}
+
+const getDisplayedMonthlyCount = () => {
+  return dashboardData.value?.stats?.this_month_bookings || dashboardData.value?.stats?.this_month || 0
+}
+
+const getInitials = (name) => {
+  if (!name || typeof name !== 'string') {
+    return 'NA'
+  }
+  const cleanName = name.trim()
+  if (!cleanName) return 'NA'
+  const nameParts = cleanName.split(' ').filter(part => part.length > 0)
+  if (nameParts.length === 0) return 'NA'
+  if (nameParts.length === 1) return nameParts[0][0].toUpperCase()
+  return nameParts[0][0].toUpperCase() + nameParts[nameParts.length - 1][0].toUpperCase()
+}
+
+const getTutorName = (tutor) => {
+  if (!tutor) return 'Tutor necunoscut'
+  if (tutor.first_name || tutor.last_name) {
+    const firstName = tutor.first_name || ''
+    const lastName = tutor.last_name || ''
+    const fullName = `${firstName} ${lastName}`.trim()
+    if (fullName) return fullName
+  }
+  if (tutor.full_name) return tutor.full_name
+  if (tutor.name) return tutor.name
+  return 'Tutor necunoscut'
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long' })
+  } catch (error) {
+    return 'Data necunoscută'
+  }
+}
+
+const formatTime = (dateString) => {
+  if (!dateString) return ''
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
+  } catch (error) {
+    return 'Ora necunoscută'
+  }
+}
+
+const getStatusLabel = (status) => {
+  const labels = {
+    pending: 'În așteptare',
+    confirmed: 'Confirmată',
+    completed: 'Finalizată',
+    cancelled: 'Anulată'
+  }
+  return labels[status] || status
+}
+
 const getSubjectColor = (subject) => {
   const colors = {
     'Matematică': 'bg-gradient-to-br from-blue-500 to-blue-600',
@@ -918,7 +933,6 @@ const getStatusIcon = (status) => {
 
 const formatRelativeDate = (dateString) => {
   if (!dateString) return ''
-
   const date = new Date(dateString)
   const now = new Date()
   const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
@@ -935,6 +949,7 @@ const handleImageError = (event) => {
   event.target.parentElement.classList.add('border-2', 'border-gray-300')
 }
 
+// Reminder functions
 const loadUpcomingReminders = async () => {
   loadingReminders.value = true
 
@@ -1039,89 +1054,9 @@ const viewAllReminders = () => {
   router.push('/notifications')
 }
 
-// ENHANCED HELPER FUNCTIONS FOR RECENT LESSONS
-const handleRepeatLesson = (lesson) => {
-  router.push({
-    name: 'tutor-detail',
-    params: { id: lesson.tutor_id },
-    query: {
-      subject: lesson.subject?.id,
-      lesson_type: lesson.lesson_type
-    }
-  })
-}
-
-const handleContactTutor = (lesson) => {
-  alert(`Contact ${getTutorName(lesson.tutor)} pentru ${lesson.subject?.name || 'lecție'}`)
-}
-
-const handleViewLessonDetails = (lesson) => {
-  router.push({
-    name: 'booking-details',
-    params: { id: lesson.id }
-  })
-}
-
-// ENHANCED HELPER FUNCTIONS
-const formatNumber = (num) => {
-  return new Intl.NumberFormat('ro-RO').format(num || 0)
-}
-
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('ro-RO', {
-    style: 'currency',
-    currency: 'RON',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount || 0)
-}
-
-const getPluralText = (count, singular, plural) => {
-  return count === 1 ? singular : plural
-}
-
-const getMonthlyGrowthText = () => {
-  const thisMonth = dashboardData.value?.stats?.this_month_bookings || dashboardData.value?.stats?.this_month || 0
-  if (thisMonth === 0) return 'Nicio rezervare încă'
-  if (thisMonth === 1) return 'Prima rezervare din lună'
-  return `+${thisMonth - 1} față de începutul lunii`
-}
-
-const getAveragePerLessonText = () => {
-  const average = getAveragePerLessonValue()
-  if (average === 0) return 'Nicio lecție plătită încă'
-  return `~${formatCurrency(average)}/lecție`
-}
-
-const getAveragePerLesson = () => {
-  const average = getAveragePerLessonValue()
-  return formatCurrency(average)
-}
-
-const getAveragePerLessonValue = () => {
-  const completed = dashboardData.value?.stats?.completed_lessons || dashboardData.value?.stats?.total_lessons || 0
-  const spent = dashboardData.value?.stats?.total_spent || 0
-  return completed > 0 ? Math.round(spent / completed) : 0
-}
-
-const getPendingReviewsText = () => {
-  const pending = dashboardData.value?.stats?.pending_reviews || 0
-  if (pending === 0) return 'Toate la zi!'
-  if (pending === 1) return 'Scrie un review'
-  return `${pending} review-uri de scris`
-}
-
-const getThisMonthSpending = () => {
-  const thisMonthBookings = dashboardData.value?.stats?.this_month_bookings || dashboardData.value?.stats?.this_month || 0
-  const avgPerLesson = getAveragePerLessonValue()
-  const estimated = thisMonthBookings * avgPerLesson
-  return formatCurrency(estimated)
-}
-
-// NAVIGATION METHODS
+// Navigation methods
 const navigateToBookings = (filter = 'all') => {
   const query = {}
-
   switch (filter) {
     case 'completed':
       query.status = 'completed'
@@ -1134,21 +1069,14 @@ const navigateToBookings = (filter = 'all') => {
     default:
       break
   }
-
   showSpendingModal.value = false
-  router.push({
-    name: 'student-bookings',
-    query
-  })
+  router.push({ name: 'student-bookings', query })
 }
 
 const navigateToPendingReviews = () => {
   const pendingReviews = dashboardData.value?.stats?.pending_reviews || 0
   if (pendingReviews > 0) {
-    router.push({
-      name: 'student-bookings',
-      query: { needsReview: 'true' }
-    })
+    router.push({ name: 'student-bookings', query: { needsReview: 'true' } })
   } else {
     router.push({ name: 'student-bookings' })
   }
@@ -1158,114 +1086,11 @@ const showSpendingBreakdown = () => {
   showSpendingModal.value = true
 }
 
-// EXISTING HELPER FUNCTIONS (keep your originals)
-const getInitials = (name) => {
-  if (!name || typeof name !== 'string') {
-    return 'NA'
-  }
-
-  const cleanName = name.trim()
-  if (!cleanName) {
-    return 'NA'
-  }
-
-  const nameParts = cleanName.split(' ').filter(part => part.length > 0)
-
-  if (nameParts.length === 0) {
-    return 'NA'
-  }
-
-  if (nameParts.length === 1) {
-    return nameParts[0][0].toUpperCase()
-  }
-
-  return nameParts[0][0].toUpperCase() + nameParts[nameParts.length - 1][0].toUpperCase()
+const handleViewLessonDetails = (lesson) => {
+  router.push({ name: 'booking-details', params: { id: lesson.id } })
 }
 
-const getTutorName = (tutor) => {
-  if (!tutor) {
-    return 'Tutor necunoscut'
-  }
-
-  if (tutor.first_name || tutor.last_name) {
-    const firstName = tutor.first_name || ''
-    const lastName = tutor.last_name || ''
-    const fullName = `${firstName} ${lastName}`.trim()
-    if (fullName) return fullName
-  }
-
-  if (tutor.full_name) return tutor.full_name
-  if (tutor.name) return tutor.name
-
-  return 'Tutor necunoscut'
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ro-RO', {
-      day: 'numeric',
-      month: 'long'
-    })
-  } catch (error) {
-    console.error('Error formatting date:', error)
-    return 'Data necunoscută'
-  }
-}
-
-const getThisMonthScheduledBookings = () => {
-  const currentMonth = new Date().getMonth()
-  const currentYear = new Date().getFullYear()
-
-  return upcomingBookings.value.filter(booking => {
-    if (!booking.scheduled_at) return false
-
-    try {
-      const bookingDate = new Date(booking.scheduled_at)
-      return bookingDate.getMonth() === currentMonth &&
-        bookingDate.getFullYear() === currentYear
-    } catch (error) {
-      console.error('Error parsing booking date:', booking.scheduled_at)
-      return false
-    }
-  }).length
-}
-
-const getDisplayedMonthlyCount = () => {
-  const thisMonthScheduled = getThisMonthScheduledBookings()
-  const thisMonthFromAPI = dashboardData.value?.stats?.this_month_bookings || dashboardData.value?.stats?.this_month || 0
-
-  return upcomingBookings.value.length > 0 ? thisMonthScheduled : thisMonthFromAPI
-}
-
-const formatTime = (dateString) => {
-  if (!dateString) return ''
-
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('ro-RO', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch (error) {
-    console.error('Error formatting time:', error)
-    return 'Ora necunoscută'
-  }
-}
-
-const getStatusLabel = (status) => {
-  const labels = {
-    pending: 'În așteptare',
-    confirmed: 'Confirmată',
-    completed: 'Finalizată',
-    cancelled: 'Anulată'
-  }
-  return labels[status] || status
-}
-
-// EXISTING METHODS (keep your originals)
+// Main data loading
 const loadDashboardData = async () => {
   loading.value = true
   error.value = null
@@ -1285,6 +1110,7 @@ const loadDashboardData = async () => {
       recentBookings.value = response.data.recent_bookings || []
     }
 
+    // Enhance recent bookings data
     recentBookings.value = recentBookings.value.map(booking => ({
       ...booking,
       tutor: {
@@ -1302,20 +1128,21 @@ const loadDashboardData = async () => {
       needs_review: booking.status === 'completed' && !booking.review
     }))
 
+    // Load reminders
     await loadUpcomingReminders()
 
     console.log('✅ Dashboard data loaded:', {
       upcoming: upcomingBookings.value.length,
       recent: recentBookings.value.length,
       reminders: upcomingReminders.value.length,
-      stats: dashboardData.value?.stats,
-      recentBookingsStructure: recentBookings.value[0]
+      stats: dashboardData.value?.stats
     })
 
   } catch (err) {
     console.error('❌ Error loading dashboard:', err)
     error.value = err.response?.data?.message || 'Eroare la încărcarea dashboard-ului'
 
+    // Set fallback data
     dashboardData.value = {
       stats: {
         total_lessons: 0,
@@ -1331,7 +1158,6 @@ const loadDashboardData = async () => {
     }
     upcomingBookings.value = []
     recentBookings.value = []
-    upcomingReminders.value = []
   } finally {
     loading.value = false
   }
@@ -1375,22 +1201,11 @@ const openReviewModal = (booking) => {
     price: booking.price,
     duration_minutes: booking.duration_minutes || 60,
     lesson_type: booking.lesson_type,
-    student_notes: booking.student_notes || '',
-    tutor_notes: booking.tutor_notes || '',
     tutor: {
       id: booking.tutor_id || booking.tutor?.id,
-      user_id: booking.tutor?.user_id || booking.tutor?.id,
-      first_name: booking.tutor?.first_name || booking.tutor?.user?.first_name || getTutorName(booking.tutor).split(' ')[0] || 'Tutor',
-      last_name: booking.tutor?.last_name || booking.tutor?.user?.last_name || getTutorName(booking.tutor).split(' ').slice(1).join(' ') || '',
-      full_name: getTutorName(booking.tutor),
-      profile_image: booking.tutor?.profile_image,
-      rating: booking.tutor?.rating || 0,
-      user: {
-        id: booking.tutor?.user_id || booking.tutor?.id,
-        first_name: booking.tutor?.first_name || booking.tutor?.user?.first_name || getTutorName(booking.tutor).split(' ')[0] || 'Tutor',
-        last_name: booking.tutor?.last_name || booking.tutor?.user?.last_name || getTutorName(booking.tutor).split(' ').slice(1).join(' ') || '',
-        full_name: getTutorName(booking.tutor)
-      }
+      first_name: booking.tutor?.first_name || getTutorName(booking.tutor).split(' ')[0] || 'Tutor',
+      last_name: booking.tutor?.last_name || getTutorName(booking.tutor).split(' ').slice(1).join(' ') || '',
+      full_name: getTutorName(booking.tutor)
     },
     subject: {
       id: booking.subject?.id,
@@ -1399,16 +1214,13 @@ const openReviewModal = (booking) => {
     },
     review: booking.review || null,
     has_review: booking.has_review || !!booking.review,
-    can_review: booking.status === 'completed' && !booking.review && !booking.has_review,
-    needs_review: booking.status === 'completed' && !booking.review && !booking.has_review
+    can_review: booking.status === 'completed' && !booking.review && !booking.has_review
   }
 
-  console.log('📋 Prepared booking data for ReviewModal:', selectedBookingForReview.value)
   showReviewModal.value = true
 }
 
 const closeReviewModal = () => {
-  console.log('🔒 Closing review modal')
   showReviewModal.value = false
   selectedBookingForReview.value = null
 }
@@ -1444,20 +1256,10 @@ const handleReviewSuccess = async (reviewData) => {
   }
 }
 
-const handleSubscriptionUpgraded = () => {
-  showSubscriptionModal.value = false
-  subscriptionStore.getSubscription()
-  adsStore.getAds()
-}
-
 // Lifecycle
 onMounted(async () => {
   console.log('🚀 StudentDashboardView mounted')
-  await Promise.all([
-    loadDashboardData(),
-    subscriptionStore.getSubscription(),
-    adsStore.getAds()
-  ])
+  await loadDashboardData()
 })
 </script>
 

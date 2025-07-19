@@ -12,10 +12,10 @@ export const useAdsStore = defineStore('ads', () => {
   const error = ref(null)
 
   // Computed
-  const bannerAds = computed(() => ads.value.filter(ad => ad.type === 'banner'))
-  const sidebarAds = computed(() => ads.value.filter(ad => ad.type === 'sidebar'))
-  const inlineAds = computed(() => ads.value.filter(ad => ad.type === 'inline'))
-  const popupAds = computed(() => ads.value.filter(ad => ad.type === 'popup'))
+  const bannerAds = computed(() => ads.value.filter(ad => ad.type === 'banner' || ad.placement === 'banner'))
+  const sidebarAds = computed(() => ads.value.filter(ad => ad.type === 'sidebar' || ad.placement === 'sidebar'))
+  const inlineAds = computed(() => ads.value.filter(ad => ad.type === 'inline' || ad.placement === 'inline'))
+  const popupAds = computed(() => ads.value.filter(ad => ad.type === 'popup' || ad.placement === 'popup'))
 
   // Actions
   const getAds = async () => {
@@ -41,7 +41,7 @@ export const useAdsStore = defineStore('ads', () => {
       console.error('❌ Error loading ads:', err)
       error.value = err.response?.data?.message || 'Error loading ads'
 
-      // Set fallback state
+      // Set fallback state - empty ads array but don't show error to user
       ads.value = []
       shouldShowAds.value = false
     } finally {
@@ -82,7 +82,6 @@ export const useAdsStore = defineStore('ads', () => {
       }
 
       console.log('👁️ Recording ad impression:', adId)
-      // You'd implement this endpoint in your backend
       await api.post(`/ads/${adId}/impression`, {
         user_id: userId
       })
@@ -95,7 +94,7 @@ export const useAdsStore = defineStore('ads', () => {
   }
 
   const getAdsByType = (type) => {
-    return ads.value.filter(ad => ad.type === type)
+    return ads.value.filter(ad => ad.type === type || ad.placement === type)
   }
 
   const getRandomAd = (type = null) => {
@@ -109,6 +108,16 @@ export const useAdsStore = defineStore('ads', () => {
   const clearAds = () => {
     ads.value = []
     shouldShowAds.value = false
+    error.value = null
+  }
+
+  // Initialize ads on store creation
+  const init = async () => {
+    try {
+      await getAds()
+    } catch (error) {
+      console.log('📢 Could not load ads initially, will work with empty state')
+    }
   }
 
   return {
@@ -131,5 +140,6 @@ export const useAdsStore = defineStore('ads', () => {
     getAdsByType,
     getRandomAd,
     clearAds,
+    init
   }
 })

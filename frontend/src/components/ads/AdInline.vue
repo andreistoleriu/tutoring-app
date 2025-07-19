@@ -1,47 +1,67 @@
 <!-- frontend/src/components/ads/AdInline.vue -->
 <template>
   <div v-if="shouldShowAd && ad" class="w-full my-6">
-    <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 p-4 relative">
-      <!-- Ad label -->
-      <div class="flex items-center justify-between mb-3">
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Reclamă sponsorizată
-        </span>
-        <button
-          @click="closeAd"
-          class="text-gray-400 hover:text-gray-600 transition-colors">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+    <!-- Ad label -->
+    <div class="text-center mb-2">
+      <span class="text-xs text-gray-400 font-medium uppercase tracking-wide">Reclamă</span>
+    </div>
+
+    <!-- Ad content -->
+    <div
+      class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden"
+      @click="handleClick">
+
+      <div class="p-6">
+        <!-- Horizontal layout -->
+        <div class="flex items-center space-x-4">
+          <!-- Ad image -->
+          <div v-if="ad.image_url" class="flex-shrink-0">
+            <img
+              :src="ad.image_url"
+              :alt="ad.title"
+              class="w-20 h-20 object-cover rounded-lg"
+              @error="handleImageError"
+            >
+          </div>
+
+          <!-- Fallback icon if no image -->
+          <div v-else class="flex-shrink-0 w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center">
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
+
+          <!-- Ad text content -->
+          <div class="flex-1 min-w-0">
+            <h3 class="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">{{ ad.title }}</h3>
+            <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ ad.description }}</p>
+
+            <!-- CTA section -->
+            <div class="flex items-center justify-between">
+              <span class="text-blue-600 text-sm font-medium">{{ ad.cta_text || 'Vezi mai mult' }}</span>
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Ad content -->
-      <div class="flex items-start space-x-4">
-        <!-- Ad image -->
-        <div v-if="ad.image_url" class="flex-shrink-0">
-          <img
-            :src="ad.image_url"
-            :alt="ad.title"
-            class="h-16 w-16 rounded-lg object-cover border border-gray-200"
-            @error="handleImageError"
-          >
-        </div>
-
-        <!-- Ad text and CTA -->
-        <div class="flex-1 min-w-0">
-          <h3 class="text-base font-semibold text-gray-900 mb-1">{{ ad.title }}</h3>
-          <p class="text-sm text-gray-600 mb-3 line-clamp-2">{{ ad.description }}</p>
+      <!-- Optional sponsored badge -->
+      <div class="px-6 py-2 bg-gray-50 border-t border-gray-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <svg class="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            <span class="text-xs text-gray-500">Conținut sponsorizat</span>
+          </div>
 
           <button
-            @click="handleClick"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm hover:shadow-md">
-            Află mai multe
-            <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            @click.stop="closeAd"
+            class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
@@ -98,14 +118,16 @@ const closeAd = () => {
 }
 
 const handleImageError = (event) => {
-  // Replace broken image with placeholder
-  event.target.outerHTML = `
-    <div class="h-16 w-16 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-      <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    </div>
+  // Hide broken image and show placeholder
+  event.target.style.display = 'none'
+  const placeholder = document.createElement('div')
+  placeholder.className = 'w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center'
+  placeholder.innerHTML = `
+    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
   `
+  event.target.parentElement.replaceChild(placeholder, event.target)
 }
 
 onMounted(() => {
