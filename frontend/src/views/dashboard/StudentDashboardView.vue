@@ -11,14 +11,15 @@
             <p class="text-gray-600 mt-1">Bine ai venit în dashboard-ul tău de student</p>
           </div>
           <div class="flex items-center space-x-4">
-            <!-- Subscription Status Button -->
+            <!-- Enhanced Subscription Status Button -->
             <button
               @click="showSubscriptionModal = true"
-              class="px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 flex items-center space-x-2 bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
+              class="px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 flex items-center space-x-2"
+              :class="subscriptionButtonClass">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>{{ trialDaysRemaining }} zile trial</span>
+              <span>{{ subscriptionButtonText }}</span>
             </button>
 
             <router-link to="/tutors"
@@ -34,6 +35,14 @@
           </div>
         </div>
       </div>
+
+      <!-- Banner Ad Section -->
+      <AdBanner
+        v-if="shouldShowAds"
+        placement="dashboard_top"
+        type="banner"
+        class="mb-6"
+      />
 
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
@@ -206,6 +215,13 @@
             </div>
           </div>
         </div>
+
+        <!-- Inline Ad after stats -->
+        <AdInline
+          v-if="shouldShowAds && randomInlineAd"
+          :ad="randomInlineAd"
+          class="mb-8"
+        />
 
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -513,8 +529,20 @@
             </div>
           </div>
 
-          <!-- Right Column - Quick Stats & Tips -->
+          <!-- Right Column - Quick Stats & Tips & Ads -->
           <div class="space-y-6">
+            <!-- Subscription Status Widget -->
+            <SubscriptionStatus
+              @upgrade="showSubscriptionModal = true"
+              @manage="showSubscriptionModal = true"
+            />
+
+            <!-- Sidebar Ad -->
+            <AdSidebar
+              v-if="shouldShowAds && randomSidebarAd"
+              :ad="randomSidebarAd"
+            />
+
             <!-- Active Reminders Section -->
             <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-6">
               <!-- Header with Warning Icon -->
@@ -640,10 +668,16 @@
                 </div>
                 <div class="flex justify-between items-center">
                   <span class="text-gray-600">Abonament</span>
-                  <span class="font-semibold text-yellow-600">Trial</span>
+                  <span class="font-semibold" :class="subscriptionStatusClass">{{ subscriptionStatusText }}</span>
                 </div>
               </div>
             </div>
+
+            <!-- Another Sidebar Ad -->
+            <AdSidebar
+              v-if="shouldShowAds && randomSidebarAd2"
+              :ad="randomSidebarAd2"
+            />
           </div>
         </div>
 
@@ -699,35 +733,12 @@
     </div>
   </div>
 
-  <!-- Simple Subscription Modal -->
-  <div v-if="showSubscriptionModal"
-    class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-    @click="showSubscriptionModal = false">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
-      <div class="p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-900">Upgrade la Premium</h3>
-          <button @click="showSubscriptionModal = false" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-              </path>
-            </svg>
-          </button>
-        </div>
-
-        <div class="space-y-4">
-          <div class="text-center py-8">
-            <h4 class="text-xl font-bold text-gray-900 mb-4">Funcționalitate în dezvoltare</h4>
-            <p class="text-gray-600 mb-6">Sistemul de abonamente va fi disponibil curând!</p>
-            <button @click="showSubscriptionModal = false"
-              class="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-medium">
-              Înțeles
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Subscription Modal -->
+  <SubscriptionModal
+    :show="showSubscriptionModal"
+    @close="showSubscriptionModal = false"
+    @upgraded="handleSubscriptionUpgraded"
+  />
 
   <!-- Review Modal -->
   <ReviewModal
@@ -745,12 +756,23 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useStudentStore } from '@/stores/student'
+import { useSubscriptionStore } from '@/stores/subscription'
+import { useAdsStore } from '@/stores/ads'
 import api from '@/services/api'
+
+// Import existing components
 import ReviewModal from '@/components/ReviewModal.vue'
+import SubscriptionStatus from '@/components/subscription/SubscriptionStatus.vue'
+import SubscriptionModal from '@/components/subscription/SubscriptionModal.vue'
+import AdBanner from '@/components/ads/AdBanner.vue'
+import AdSidebar from '@/components/ads/AdSidebar.vue'
+import AdInline from '@/components/ads/AdInline.vue'
 
 // Composables
 const authStore = useAuthStore()
 const studentStore = useStudentStore()
+const subscriptionStore = useSubscriptionStore()
+const adsStore = useAdsStore()
 const router = useRouter()
 
 // Reactive data
@@ -771,8 +793,68 @@ const upcomingReminders = ref([])
 const loadingReminders = ref(false)
 const totalRemindersCount = ref(0)
 
-// Simple trial state
-const trialDaysRemaining = ref(14)
+// Computed properties for subscription and ads
+const shouldShowAds = computed(() => subscriptionStore.shouldShowAds)
+const randomInlineAd = computed(() => adsStore.getRandomAd('inline'))
+const randomSidebarAd = computed(() => adsStore.getRandomAd('sidebar'))
+const randomSidebarAd2 = computed(() => {
+  const ads = adsStore.getAdsByType('sidebar')
+  if (ads.length <= 1) return null
+  // Get a different ad than the first one
+  return ads[1] || null
+})
+
+const subscriptionButtonClass = computed(() => {
+  const subscription = subscriptionStore.subscription
+  if (!subscription) return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+
+  if (subscription.plan_type === 'premium') {
+    return 'bg-green-100 text-green-700 hover:bg-green-200'
+  } else if (subscription.is_in_trial) {
+    return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+  } else {
+    return 'bg-red-100 text-red-700 hover:bg-red-200'
+  }
+})
+
+const subscriptionButtonText = computed(() => {
+  const subscription = subscriptionStore.subscription
+  if (!subscription) return '14 zile trial'
+
+  if (subscription.plan_type === 'premium') {
+    return `Premium - ${subscription.days_remaining || 0} zile`
+  } else if (subscription.is_in_trial) {
+    return `${subscription.trial_days_remaining || 0} zile trial`
+  } else {
+    return 'Trial expirat'
+  }
+})
+
+const subscriptionStatusText = computed(() => {
+  const subscription = subscriptionStore.subscription
+  if (!subscription) return 'Trial'
+
+  if (subscription.plan_type === 'premium') {
+    return 'Premium'
+  } else if (subscription.is_in_trial) {
+    return 'Trial'
+  } else {
+    return 'Expirat'
+  }
+})
+
+const subscriptionStatusClass = computed(() => {
+  const subscription = subscriptionStore.subscription
+  if (!subscription) return 'text-yellow-600'
+
+  if (subscription.plan_type === 'premium') {
+    return 'text-green-600'
+  } else if (subscription.is_in_trial) {
+    return 'text-yellow-600'
+  } else {
+    return 'text-red-600'
+  }
+})
 
 // Learning tips
 const tips = [
@@ -791,7 +873,7 @@ const currentTip = computed(() => {
   return tips[tipIndex]
 })
 
-// Helper functions
+// Helper functions (keeping all your existing helper functions)
 const formatNumber = (num) => {
   return new Intl.NumberFormat('ro-RO').format(num || 0)
 }
@@ -1090,6 +1172,22 @@ const handleViewLessonDetails = (lesson) => {
   router.push({ name: 'booking-details', params: { id: lesson.id } })
 }
 
+// Subscription methods
+const handleSubscriptionUpgraded = async () => {
+  console.log('🎉 Subscription upgraded successfully')
+
+  // Refresh subscription data
+  await subscriptionStore.getSubscription()
+
+  // Refresh ads (should hide them now)
+  await adsStore.getAds()
+
+  // Refresh dashboard data
+  await loadDashboardData()
+
+  showSubscriptionModal.value = false
+}
+
 // Main data loading
 const loadDashboardData = async () => {
   loading.value = true
@@ -1258,7 +1356,15 @@ const handleReviewSuccess = async (reviewData) => {
 
 // Lifecycle
 onMounted(async () => {
-  console.log('🚀 StudentDashboardView mounted')
+  console.log('🚀 Enhanced StudentDashboardView mounted')
+
+  // Load subscription data first
+  await subscriptionStore.getSubscription()
+
+  // Load ads data
+  await adsStore.getAds()
+
+  // Load dashboard data
   await loadDashboardData()
 })
 </script>
