@@ -14,12 +14,12 @@
           </div>
           <div class="flex items-center space-x-4">
             <!-- Enhanced Subscription Status Button -->
-            <button
-              @click="showSubscriptionModal = true"
+            <button @click="showSubscriptionModal = true"
               class="px-4 py-2 rounded-xl font-medium text-sm transition-all duration-200 flex items-center space-x-2"
               :class="subscriptionButtonClass">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>{{ subscriptionButtonText }}</span>
             </button>
@@ -53,13 +53,9 @@
         </div>
       </div>
 
-      <!-- Banner Ad Section -->
-      <AdBanner
-        v-if="shouldShowAds"
-        placement="dashboard_top"
-        type="banner"
-        class="mb-6"
-      />
+      <!-- Enhanced AdBanner usage -->
+      <AdBanner placement="header" type="banner" :limit="1" :auto-refresh="true" :refresh-interval="60000"
+        @ad-clicked="handleAdClick" @ad-closed="handleAdClose" />
 
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
@@ -209,7 +205,7 @@
               <div class="ml-4 flex-1">
                 <p class="text-sm font-medium text-gray-600">Review-uri restante</p>
                 <p class="text-2xl font-bold text-gray-900">{{ formatNumber(dashboardData?.stats?.pending_reviews || 0)
-                }}</p>
+                  }}</p>
                 <p class="text-xs mt-1"
                   :class="(dashboardData?.stats?.pending_reviews || 0) > 0 ? 'text-yellow-600' : 'text-gray-500'">
                   {{ getPendingReviewsText() }}
@@ -228,12 +224,9 @@
           </div>
         </div>
 
-        <!-- Inline Ad after stats -->
-        <AdInline
-          v-if="shouldShowAds && randomInlineAd"
-          :ad="randomInlineAd"
-          class="mb-8"
-        />
+        <!-- Enhanced AdInline usage -->
+        <AdInline placement="feed" :show-metrics="true" :auto-rotate="true" :rotate-interval="30000"
+          @clicked="handleInlineAdClick" />
 
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -361,22 +354,24 @@
             <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-4 sm:p-6">
               <div class="flex items-center justify-between mb-4 sm:mb-6">
                 <h2 class="text-lg sm:text-xl font-bold text-gray-900 flex items-center">
-                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 mr-2" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                   </svg>
                   Lecții recente
                 </h2>
 
                 <router-link to="/student/bookings"
-                  class="text-purple-600 hover:text-purple-700 font-medium text-sm transition-colors hidden sm:block"
-                >
+                  class="text-purple-600 hover:text-purple-700 font-medium text-sm transition-colors hidden sm:block">
                   Vezi toate
                 </router-link>
               </div>
 
               <!-- Empty State for recent lessons -->
               <div v-if="!recentBookings?.length" class="text-center py-8">
-                <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
+                <div
+                  class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center">
                   <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
@@ -386,10 +381,9 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-2">Nicio lecție recentă</h3>
                 <p class="text-gray-600 mb-4">Lecțiile finalizate vor apărea aici.</p>
                 <router-link to="/tutors"
-                  class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
+                  class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                   <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                   </svg>
                   Rezervă prima lecție
                 </router-link>
@@ -397,40 +391,28 @@
 
               <!-- Recent Lessons List -->
               <div v-else class="space-y-3">
-                <div
-                  v-for="lesson in recentBookings.slice(0, 5)"
-                  :key="lesson.id"
+                <div v-for="lesson in recentBookings.slice(0, 5)" :key="lesson.id"
                   class="group bg-white border border-gray-200 rounded-xl p-3 sm:p-4 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
                   @click="handleViewLessonDetails(lesson)">
 
                   <div class="flex items-start space-x-3">
                     <!-- Tutor Avatar with Status -->
                     <div class="relative flex-shrink-0">
-                      <div
-                        v-if="lesson.tutor?.profile_image"
-                        class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ring-2 ring-white shadow-md"
-                      >
-                        <img
-                          :src="lesson.tutor.profile_image"
-                          :alt="getTutorName(lesson.tutor)"
-                          class="w-full h-full object-cover"
-                          @error="handleImageError"
-                        >
+                      <div v-if="lesson.tutor?.profile_image"
+                        class="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden ring-2 ring-white shadow-md">
+                        <img :src="lesson.tutor.profile_image" :alt="getTutorName(lesson.tutor)"
+                          class="w-full h-full object-cover" @error="handleImageError">
                       </div>
-                      <div
-                        v-else
+                      <div v-else
                         class="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-white shadow-md"
-                        :class="getSubjectColor(lesson.subject?.name)"
-                      >
+                        :class="getSubjectColor(lesson.subject?.name)">
                         {{ getInitials(getTutorName(lesson.tutor)) }}
                       </div>
 
                       <!-- Status Badge -->
                       <div
                         class="absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold shadow-sm"
-                        :class="getStatusColor(lesson.status)"
-                        :title="getStatusLabel(lesson.status)"
-                      >
+                        :class="getStatusColor(lesson.status)" :title="getStatusLabel(lesson.status)">
                         {{ getStatusIcon(lesson.status) }}
                       </div>
                     </div>
@@ -450,7 +432,8 @@
                       <!-- Tutor Name -->
                       <p class="text-sm text-gray-600 truncate mb-2 flex items-center">
                         <svg class="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         cu {{ getTutorName(lesson.tutor) }}
                       </p>
@@ -459,14 +442,16 @@
                       <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 mb-3">
                         <span class="flex items-center">
                           <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           {{ formatRelativeDate(lesson.completed_at || lesson.scheduled_at) }}
                         </span>
 
                         <span class="flex items-center">
                           <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           {{ lesson.duration_minutes || 60 }} min
                         </span>
@@ -481,15 +466,11 @@
                       <div v-if="lesson.review || lesson.has_review" class="flex items-center space-x-2 mb-2">
                         <span class="text-xs text-gray-600">Evaluarea ta:</span>
                         <div class="flex text-yellow-400">
-                          <svg
-                            v-for="star in 5"
-                            :key="star"
-                            class="w-3 h-3"
+                          <svg v-for="star in 5" :key="star" class="w-3 h-3"
                             :class="star <= (lesson.review?.rating || lesson.review_rating || 0) ? 'text-yellow-400' : 'text-gray-300'"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                              d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                           </svg>
                         </div>
                       </div>
@@ -505,17 +486,16 @@
                       </div>
 
                       <!-- Action Button -->
-                      <button
-                        v-if="lesson.status === 'completed' && !lesson.review && !lesson.has_review"
+                      <button v-if="lesson.status === 'completed' && !lesson.review && !lesson.has_review"
                         @click.stop="openReviewModal(lesson)"
-                        class="text-xs px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-full hover:bg-yellow-200 transition-colors font-medium"
-                      >
+                        class="text-xs px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-full hover:bg-yellow-200 transition-colors font-medium">
                         ⭐ Scrie review
                       </button>
 
-                      <div v-else-if="lesson.review || lesson.has_review" class="text-xs text-green-600 font-medium flex items-center">
+                      <div v-else-if="lesson.review || lesson.has_review"
+                        class="text-xs text-green-600 font-medium flex items-center">
                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
                         Evaluat
                       </div>
@@ -524,36 +504,32 @@
                 </div>
 
                 <!-- View All Button (Mobile) -->
-                <router-link
-                  v-if="recentBookings?.length"
-                  to="/student/bookings"
-                  class="w-full mt-4 py-3 border-2 border-purple-200 text-purple-600 rounded-xl hover:bg-purple-50 transition-colors font-medium sm:hidden flex items-center justify-center space-x-2"
-                >
+                <router-link v-if="recentBookings?.length" to="/student/bookings"
+                  class="w-full mt-4 py-3 border-2 border-purple-200 text-purple-600 rounded-xl hover:bg-purple-50 transition-colors font-medium sm:hidden flex items-center justify-center space-x-2">
                   <span>Vezi toate lecțiile</span>
-                  <span v-if="dashboardData?.stats?.total_lessons" class="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-bold">
+                  <span v-if="dashboardData?.stats?.total_lessons"
+                    class="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-bold">
                     {{ dashboardData.stats.total_lessons }}
                   </span>
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                   </svg>
                 </router-link>
               </div>
+              <AdBanner placement="bottom" type="banner" :limit="1" :auto-refresh="false" @ad-clicked="handleAdClick"
+                @ad-closed="handleAdClose" />
             </div>
           </div>
 
           <!-- Right Column - Quick Stats & Tips & Ads -->
+          <!-- Right Column - Quick Stats & Tips & Ads -->
           <div class="space-y-6">
             <!-- Subscription Status Widget -->
-            <SubscriptionStatus
-              @upgrade="showSubscriptionModal = true"
-              @manage="showSubscriptionModal = true"
-            />
+            <SubscriptionStatus @upgrade="showSubscriptionModal = true" @manage="showSubscriptionModal = true" />
 
-            <!-- Sidebar Ad -->
-            <AdSidebar
-              v-if="shouldShowAds && randomSidebarAd"
-              :ad="randomSidebarAd"
-            />
+            <AdSidebar placement="sidebar" :limit="2" :show-metrics="false" :auto-refresh="true"
+              @ads-loaded="handleAdsLoaded" />
+
 
             <!-- Active Reminders Section -->
             <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-sm border border-gray-200/50 p-6">
@@ -561,12 +537,13 @@
               <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                 <!-- Warning triangle icon (indicates active alerts) -->
                 <svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
                 Reminder-uri active
                 <!-- Show count badge if there are reminders -->
                 <span v-if="upcomingReminders.length > 0"
-                      class="ml-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
+                  class="ml-2 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded-full">
                   {{ upcomingReminders.length }}
                 </span>
               </h3>
@@ -575,7 +552,9 @@
               <div class="space-y-3">
                 <!-- Loading State -->
                 <div v-if="loadingReminders" class="text-center py-4">
-                  <div class="animate-spin w-6 h-6 border-2 border-yellow-600 border-t-transparent rounded-full mx-auto"></div>
+                  <div
+                    class="animate-spin w-6 h-6 border-2 border-yellow-600 border-t-transparent rounded-full mx-auto">
+                  </div>
                   <p class="text-sm text-gray-500 mt-2">Se încarcă reminder-urile...</p>
                 </div>
 
@@ -583,7 +562,8 @@
                 <div v-else-if="upcomingReminders.length === 0" class="text-center py-6">
                   <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <p class="text-gray-500 text-sm">Nu ai reminder-uri active</p>
@@ -593,8 +573,8 @@
                 <!-- Active Reminders List -->
                 <div v-else>
                   <div v-for="reminder in upcomingReminders" :key="reminder.id"
-                       class="p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer"
-                       @click="handleReminderClick(reminder)">
+                    class="p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer"
+                    @click="handleReminderClick(reminder)">
 
                     <!-- Reminder Content -->
                     <div class="flex items-start justify-between">
@@ -607,13 +587,15 @@
                         <!-- Time until reminder -->
                         <div class="flex items-center mt-1 space-x-2">
                           <svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <p class="text-xs text-yellow-600">{{ formatReminderTime(reminder) }}</p>
                         </div>
 
                         <!-- Additional info for lesson reminders -->
-                        <div v-if="reminder.type && reminder.type.includes('lesson') && reminder.data" class="mt-2 text-xs text-yellow-700">
+                        <div v-if="reminder.type && reminder.type.includes('lesson') && reminder.data"
+                          class="mt-2 text-xs text-yellow-700">
                           📚 {{ reminder.data.subject }} •
                           {{ reminder.data.lesson_type === 'online' ? '💻 Online' : '👥 Față în față' }}
                         </div>
@@ -622,16 +604,22 @@
                       <!-- Reminder Type Icon -->
                       <div class="flex-shrink-0 ml-2">
                         <!-- Lesson reminder icon -->
-                        <svg v-if="reminder.type && reminder.type.includes('lesson')" class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        <svg v-if="reminder.type && reminder.type.includes('lesson')" class="w-4 h-4 text-yellow-600"
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <!-- Review reminder icon -->
-                        <svg v-else-if="reminder.type && reminder.type.includes('review')" class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                        <svg v-else-if="reminder.type && reminder.type.includes('review')"
+                          class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                         </svg>
                         <!-- Default reminder icon -->
-                        <svg v-else class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-3.14 5.86-2.86-5.86zm0 0V12a3 3 0 00-6 0v5l-3 3h12l-3-3z"/>
+                        <svg v-else class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor"
+                          viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 17h5l-3.14 5.86-2.86-5.86zm0 0V12a3 3 0 00-6 0v5l-3 3h12l-3-3z" />
                         </svg>
                       </div>
                     </div>
@@ -639,8 +627,7 @@
 
                   <!-- View All Link (if more than 3 reminders) -->
                   <div v-if="upcomingReminders.length >= 3" class="mt-4 text-center">
-                    <button @click="viewAllReminders"
-                            class="text-sm text-yellow-700 hover:text-yellow-800 font-medium">
+                    <button @click="viewAllReminders" class="text-sm text-yellow-700 hover:text-yellow-800 font-medium">
                       Vezi toate reminder-urile ({{ totalRemindersCount }})
                     </button>
                   </div>
@@ -684,12 +671,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Another Sidebar Ad -->
-            <AdSidebar
-              v-if="shouldShowAds && randomSidebarAd2"
-              :ad="randomSidebarAd2"
-            />
           </div>
         </div>
 
@@ -746,21 +727,14 @@
   </div>
 
   <!-- Subscription Modal -->
-  <SubscriptionModal
-    :show="showSubscriptionModal"
-    @close="showSubscriptionModal = false"
-    @upgraded="handleSubscriptionUpgraded"
-  />
+  <SubscriptionModal :show="showSubscriptionModal" @close="showSubscriptionModal = false"
+    @upgraded="handleSubscriptionUpgraded" @canceled="handleSubscriptionCanceled"
+    @renewed="handleSubscriptionRenewed" />
 
   <!-- Review Modal -->
-  <ReviewModal
-    v-if="showReviewModal"
-    :booking="selectedBookingForReview"
-    :existing-review="selectedBookingForReview?.review"
-    :is-open="showReviewModal"
-    @close="closeReviewModal"
-    @success="handleReviewSuccess"
-  />
+  <ReviewModal v-if="showReviewModal" :booking="selectedBookingForReview"
+    :existing-review="selectedBookingForReview?.review" :is-open="showReviewModal" @close="closeReviewModal"
+    @success="handleReviewSuccess" />
 </template>
 
 <script setup>
@@ -804,6 +778,91 @@ const showSubscriptionModal = ref(false)
 const upcomingReminders = ref([])
 const loadingReminders = ref(false)
 const totalRemindersCount = ref(0)
+
+// ===== AD EVENT HANDLERS =====
+const handleAdClick = (ad) => {
+  console.log('🖱️ Ad clicked:', ad.title)
+  // Track analytics if needed
+}
+
+const handleAdClose = (adId) => {
+  console.log('❌ Ad closed:', adId)
+  // Update UI state if needed
+}
+
+const handleAdsLoaded = (data) => {
+  console.log('📢 Ads loaded:', data)
+
+  // Debug subscription status when ads load
+  console.log('Subscription info:', {
+    subscription: subscriptionStore.subscription,
+    shouldShowAds: subscriptionStore.shouldShowAds,
+    isPremium: subscriptionStore.isPremiumUser,
+    isInTrial: subscriptionStore.isInTrial,
+    hasExpired: subscriptionStore.hasExpired
+  })
+}
+
+const handleInlineAdClick = (ad) => {
+  console.log('🎯 Inline ad clicked:', ad.title)
+  // Track conversion if needed
+}
+
+// ===== DEBUG FUNCTIONS =====
+const debugReloadAds = async () => {
+  console.log('🔄 Force reloading ads...')
+  await adsStore.getAds()
+  console.log('Current ads state:', {
+    ads: adsStore.ads,
+    shouldShow: adsStore.shouldShowAds,
+    bannerAds: adsStore.bannerAds,
+    sidebarAds: adsStore.sidebarAds,
+    inlineAds: adsStore.inlineAds
+  })
+}
+
+const debugCheckAdsAPI = async () => {
+  try {
+    console.log('🔍 Checking ads API directly...')
+    const response = await api.get('/ads')
+    console.log('Direct API response:', response.data)
+  } catch (error) {
+    console.error('❌ API error:', error)
+  }
+}
+
+// Force show ads for testing
+const forceShowAds = () => {
+  console.log('🎯 Forcing ads to show...')
+
+  // Set subscription to expired trial
+  subscriptionStore.subscription = {
+    plan_type: 'free_trial',
+    status: 'expired',
+    shows_ads: true,
+    is_in_trial: false,
+    trial_days_remaining: 0,
+    days_remaining: 0,
+    plan_name: 'Trial Expirat'
+  }
+
+  console.log('Updated subscription:', subscriptionStore.subscription)
+  console.log('Should show ads now:', subscriptionStore.shouldShowAds)
+
+  // Reload ads
+  adsStore.getAds()
+}
+
+// Expose debug functions globally (for console access)
+if (typeof window !== 'undefined') {
+  window.debugAds = {
+    reloadAds: debugReloadAds,
+    checkAPI: debugCheckAdsAPI,
+    forceShowAds: forceShowAds,
+    subscriptionStore,
+    adsStore
+  }
+}
 
 // Computed properties for subscription and ads
 const shouldShowAds = computed(() => subscriptionStore.shouldShowAds)
