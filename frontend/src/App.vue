@@ -49,6 +49,8 @@
                 Dashboard
               </router-link>
 
+              <MessageBadge class="hidden md:block" />
+
               <!-- User Menu -->
               <div class="relative" ref="userMenuRef">
                 <button @click="showUserMenu = !showUserMenu"
@@ -78,6 +80,8 @@
                       <span>Dashboard</span>
                     </div>
                   </router-link>
+
+                  <MessageBadge :show-label="true" class="mx-2" />
 
                   <router-link to="/profile" class="block px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors"
                     @click="showUserMenu = false">
@@ -122,22 +126,25 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue' // ✅ ADDED watch import
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useMessageStore } from '@/stores/messages' // ✅ ADDED this import
 import LoginModal from './components/auth/LoginModal.vue'
 import RegisterModal from './components/auth/RegisterModal.vue'
-
+import MessageBadge from './components/messages/MessageBadge.vue'
 
 export default {
   name: 'App',
   components: {
     LoginModal,
-    RegisterModal
+    RegisterModal,
+    MessageBadge,
   },
   setup() {
     const router = useRouter()
     const authStore = useAuthStore()
+    const messageStore = useMessageStore() // ✅ ADDED this line
 
     const showLoginModal = ref(false)
     const showRegisterModal = ref(false)
@@ -155,9 +162,29 @@ export default {
     }
 
     const handleLogout = async () => {
+      messageStore.reset() // ✅ Clear messages when user logs out
       await authStore.logout()
       showUserMenu.value = false
       router.push('/')
+    }
+
+    // ✅ ADDED: Initialize message store for authenticated users
+    const initializeMessagesForUser = () => {
+      if (authStore.isAuthenticated) {
+        messageStore.loadUnreadCount()
+
+        // Set up periodic refresh for unread messages every 30 seconds
+        const interval = setInterval(() => {
+          if (authStore.isAuthenticated) {
+            messageStore.loadUnreadCount()
+          } else {
+            clearInterval(interval)
+          }
+        }, 30000)
+
+        // Store interval ID to clean up later
+        return interval
+      }
     }
 
     // Close user menu when clicking outside
@@ -167,6 +194,19 @@ export default {
       }
     }
 
+    // ✅ ADDED: Watch for authentication changes
+    let messageInterval = null
+    const unwatch = watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+      if (isAuthenticated) {
+        messageInterval = initializeMessagesForUser()
+      } else {
+        messageStore.reset()
+        if (messageInterval) {
+          clearInterval(messageInterval)
+          messageInterval = null
+        }
+      }
+    }, { immediate: true })
 
     onMounted(async () => {
       // Initialize auth state
@@ -175,7 +215,7 @@ export default {
       // Add click outside listener
       document.addEventListener('click', handleClickOutside)
 
-      // ADD THESE: Listen for modal events from child components
+      // Listen for modal events from child components
       window.addEventListener('open-login-modal', () => {
         showLoginModal.value = true
       })
@@ -183,12 +223,17 @@ export default {
       window.addEventListener('open-register-modal', () => {
         showRegisterModal.value = true
       })
+
+      // ✅ ADDED: Initialize messages if user is already authenticated
+      if (authStore.isAuthenticated) {
+        messageInterval = initializeMessagesForUser()
+      }
     })
 
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside)
 
-      // ADD THESE: Cleanup event listeners
+      // Cleanup event listeners
       window.removeEventListener('open-login-modal', () => {
         showLoginModal.value = true
       })
@@ -196,10 +241,17 @@ export default {
       window.removeEventListener('open-register-modal', () => {
         showRegisterModal.value = true
       })
+
+      // ✅ ADDED: Clean up watchers and intervals
+      unwatch()
+      if (messageInterval) {
+        clearInterval(messageInterval)
+      }
     })
 
     return {
       authStore,
+      messageStore, // ✅ ADDED: Return messageStore for template access (if needed)
       showLoginModal,
       showRegisterModal,
       showUserMenu,

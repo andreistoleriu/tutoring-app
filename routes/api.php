@@ -172,6 +172,15 @@ Route::prefix('v1')->group(function () {
             Route::get('{paymentId}/status', [PaymentController::class, 'getPaymentStatus']);
         });
 
+        Route::prefix('messages')->group(function () {
+            Route::get('/', [MessageController::class, 'index']); // Get user's conversations
+            Route::post('/', [MessageController::class, 'store']); // Send a message
+            Route::post('start-conversation', [MessageController::class, 'startConversation']); // Start new conversation
+            Route::get('unread-count', [MessageController::class, 'getUnreadCount']); // Get unread messages count
+            Route::get('{conversation}', [MessageController::class, 'show']); // Get conversation messages
+            Route::patch('{conversation}/read', [MessageController::class, 'markAsRead']); // Mark conversation as read
+        });
+
         // Ad routes - FIXED: Correct route structure
         Route::get('ads', function (Request $request) {
             // Log what we're receiving for debugging

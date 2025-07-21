@@ -152,4 +152,56 @@ class User extends Authenticatable
             $subscription = $this->activeSubscription;
             return $subscription && $subscription->plan_type === 'premium' && $subscription->isActive();
         }
+
+        public function tutorConversations(): HasMany
+        {
+            return $this->hasMany(Conversation::class, 'tutor_id');
+        }
+
+        public function studentConversations(): HasMany
+        {
+            return $this->hasMany(Conversation::class, 'student_id');
+        }
+
+        public function sentMessages(): HasMany
+        {
+            return $this->hasMany(Message::class, 'sender_id');
+        }
+
+        // Add to the helper methods section
+        public function conversations(): HasMany
+        {
+            if ($this->isTutor()) {
+                return $this->tutorConversations();
+            }
+
+            return $this->studentConversations();
+        }
+
+        public function getConversationWith(User $user): ?Conversation
+        {
+            if ($this->isTutor() && $user->isStudent()) {
+                return Conversation::where('tutor_id', $this->id)
+                    ->where('student_id', $user->id)
+                    ->first();
+            }
+
+            if ($this->isStudent() && $user->isTutor()) {
+                return Conversation::where('tutor_id', $user->id)
+                    ->where('student_id', $this->id)
+                    ->first();
+            }
+
+            return null;
+        }
+
+        public function getTotalUnreadMessagesCount(): int
+        {
+            return $this->conversations()
+                ->with('messages')
+                ->get()
+                ->sum(function ($conversation) {
+                    return $conversation->getUnreadCountFor($this);
+                });
+        }
 }
