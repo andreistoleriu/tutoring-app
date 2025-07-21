@@ -33,28 +33,45 @@ export const useMessageStore = defineStore('messages', () => {
     }
   }
 
-  const loadConversation = async (conversationId) => {
-    loading.value = true
-    error.value = null
+const loadConversation = async (conversationId) => {
+  loading.value = true
+  error.value = null
 
-    try {
-      const response = await api.get(`/messages/${conversationId}`)
-      currentConversation.value = response.data.conversation
-      messages.value = response.data.messages.reverse() // Show oldest first
+  try {
+    const response = await api.get(`/messages/${conversationId}`)
+    currentConversation.value = response.data.conversation
 
-      // Update unread count for this conversation
-      const conv = conversations.value.find(c => c.id === conversationId)
-      if (conv) {
-        conv.unread_count = 0
-        updateUnreadCount()
+    // Only update messages if we have new ones (to avoid scroll jumping)
+    const newMessages = response.data.messages.reverse() // Show oldest first
+
+    // Check if we have new messages
+    if (messages.value.length === 0 || newMessages.length !== messages.value.length) {
+      messages.value = newMessages
+    } else {
+      // Check if any messages are different
+      const hasChanges = newMessages.some((newMsg, index) => {
+        const existingMsg = messages.value[index]
+        return !existingMsg || existingMsg.id !== newMsg.id || existingMsg.read_at !== newMsg.read_at
+      })
+
+      if (hasChanges) {
+        messages.value = newMessages
       }
-    } catch (err) {
-      error.value = err.response?.data?.message || 'Eroare la încărcarea mesajelor'
-      console.error('Error loading conversation:', err)
-    } finally {
-      loading.value = false
     }
+
+    // Update unread count for this conversation
+    const conv = conversations.value.find(c => c.id === conversationId)
+    if (conv) {
+      conv.unread_count = 0
+      updateUnreadCount()
+    }
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Eroare la încărcarea mesajelor'
+    console.error('Error loading conversation:', err)
+  } finally {
+    loading.value = false
   }
+}
 
   const sendMessage = async (messageData) => {
     sending.value = true

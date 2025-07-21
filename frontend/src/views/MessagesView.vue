@@ -1,5 +1,5 @@
+<!-- frontend/src/views/MessagesView.vue -->
 <template>
-  <!-- Mobile-First Messages View -->
   <div class="min-h-screen bg-gray-50">
     <!-- Header -->
     <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -90,7 +90,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between mb-1">
                 <h3 class="font-medium text-gray-900 truncate">
-                  {{ conversation.other_participant.first_name }} {{ conversation.other_participant.last_name }}
+                  {{ conversation.other_participant?.first_name }} {{ conversation.other_participant?.last_name }}
                 </h3>
                 <span class="text-xs text-gray-500">
                   {{ formatMessageTime(conversation.last_message_at) }}
@@ -108,58 +108,11 @@
         </div>
       </div>
     </div>
-
-    <!-- Start Conversation Modal -->
-    <div v-if="showStartModal"
-         class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
-      <div class="bg-white rounded-t-xl sm:rounded-xl w-full max-w-md max-h-[80vh] overflow-hidden">
-        <!-- Modal Header -->
-        <div class="px-6 py-4 border-b border-gray-200">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900">Mesaj nou</h3>
-            <button @click="showStartModal = false"
-                    class="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Modal Body -->
-        <div class="p-6">
-          <form @submit.prevent="handleStartConversation">
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Mesaj pentru tutor
-              </label>
-              <textarea v-model="newMessage"
-                        rows="4"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                        placeholder="Scrie mesajul tău aici..."
-                        required></textarea>
-            </div>
-
-            <div class="flex space-x-3">
-              <button type="button" @click="showStartModal = false"
-                      class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                Anulează
-              </button>
-              <button type="submit" :disabled="sending || !newMessage.trim()"
-                      class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                <span v-if="sending">Se trimite...</span>
-                <span v-else>Trimite</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessageStore } from '@/stores/messages'
 import { useAuthStore } from '@/stores/auth'
@@ -169,14 +122,11 @@ const messageStore = useMessageStore()
 const authStore = useAuthStore()
 
 // Component state
-const showStartModal = ref(false)
-const newMessage = ref('')
-const selectedTutorId = ref(null)
+let intervalId = null
 
 // Computed
 const conversations = computed(() => messageStore.conversations)
 const loading = computed(() => messageStore.loading)
-const sending = computed(() => messageStore.sending)
 const error = computed(() => messageStore.error)
 const unreadCount = computed(() => messageStore.unreadCount)
 const hasUnreadMessages = computed(() => messageStore.hasUnreadMessages)
@@ -220,26 +170,6 @@ const formatMessageTime = (timestamp) => {
   }
 }
 
-const handleStartConversation = async () => {
-  if (!newMessage.value.trim() || !selectedTutorId.value) return
-
-  try {
-    const conversation = await messageStore.startConversation(
-      selectedTutorId.value,
-      newMessage.value.trim()
-    )
-
-    showStartModal.value = false
-    newMessage.value = ''
-    selectedTutorId.value = null
-
-    // Navigate to the new conversation
-    router.push(`/messages/${conversation.id}`)
-  } catch (error) {
-    // Error is handled by the store
-  }
-}
-
 const clearError = () => {
   messageStore.clearError()
 }
@@ -249,13 +179,14 @@ onMounted(() => {
   refreshConversations()
 
   // Set up periodic refresh for unread count
-  const interval = setInterval(() => {
+  intervalId = setInterval(() => {
     messageStore.loadUnreadCount()
   }, 30000) // Every 30 seconds
+})
 
-  // Cleanup on unmount
-  onUnmounted(() => {
-    clearInterval(interval)
-  })
+onUnmounted(() => {
+  if (intervalId) {
+    clearInterval(intervalId)
+  }
 })
 </script>

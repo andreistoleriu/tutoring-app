@@ -153,11 +153,6 @@ class User extends Authenticatable
             return $subscription && $subscription->plan_type === 'premium' && $subscription->isActive();
         }
 
-        public function tutorConversations(): HasMany
-        {
-            return $this->hasMany(Conversation::class, 'tutor_id');
-        }
-
         public function studentConversations(): HasMany
         {
             return $this->hasMany(Conversation::class, 'student_id');
@@ -204,4 +199,11 @@ class User extends Authenticatable
                     return $conversation->getUnreadCountFor($this);
                 });
         }
+
+        // Add these relationship methods to your User model:
+public function tutorConversations(): HasMany
+{
+    return $this->hasMany(Conversation::class, 'tutor_id');
+}
+
 }

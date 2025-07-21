@@ -1,5 +1,5 @@
+<!-- frontend/src/components/messages/StartConversationButton.vue -->
 <template>
-  <!-- Start Conversation Button/Modal Component -->
   <div>
     <!-- Trigger Button -->
     <button @click="openModal"
@@ -9,7 +9,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
       </svg>
-      <span>{{ existingConversation ? 'Continuă conversația' : 'Trimite mesaj' }}</span>
+      <span>💬 Trimite mesaj</span>
     </button>
 
     <!-- Modal -->
@@ -20,7 +20,7 @@
         <div class="px-6 py-4 border-b border-gray-200">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">
-              Mesaj pentru {{ tutor.first_name }}
+              Mesaj pentru {{ tutorName }}
             </h3>
             <button @click="closeModal"
                     class="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -36,18 +36,16 @@
           <!-- Tutor Info -->
           <div class="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
             <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-              {{ getInitials(tutor) }}
+              {{ getInitials(tutorName) }}
             </div>
             <div>
-              <h4 class="font-medium text-gray-900">
-                {{ tutor.first_name }} {{ tutor.last_name }}
-              </h4>
-              <p class="text-sm text-gray-600">{{ tutor.tutor?.bio?.slice(0, 60) }}...</p>
+              <h4 class="font-medium text-gray-900">{{ tutorName }}</h4>
+              <p class="text-sm text-gray-600">{{ getTutorBio() }}</p>
             </div>
           </div>
 
           <!-- Quick message templates -->
-          <div v-if="!existingConversation" class="mb-4">
+          <div class="mb-4">
             <p class="text-sm font-medium text-gray-700 mb-2">Alege un mesaj rapid:</p>
             <div class="space-y-2">
               <button v-for="template in messageTemplates" :key="template.id"
@@ -85,7 +83,7 @@
               <button type="submit" :disabled="sending || !message.trim()"
                       class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                 <span v-if="sending">Se trimite...</span>
-                <span v-else>{{ existingConversation ? 'Trimite mesaj' : 'Începe conversația' }}</span>
+                <span v-else>Începe conversația</span>
               </button>
             </div>
           </form>
@@ -96,7 +94,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessageStore } from '@/stores/messages'
 import { useAuthStore } from '@/stores/auth'
@@ -121,9 +119,25 @@ const loading = ref(false)
 const sending = computed(() => messageStore.sending)
 const error = computed(() => messageStore.error)
 const currentUser = computed(() => authStore.user)
-const existingConversation = computed(() => {
-  if (!currentUser.value || !props.tutor) return null
-  return currentUser.value.getConversationWith(props.tutor)
+
+// Get tutor name safely
+const tutorName = computed(() => {
+  if (props.tutor.user) {
+    return `${props.tutor.user.first_name} ${props.tutor.user.last_name}`
+  }
+  return `${props.tutor.first_name || ''} ${props.tutor.last_name || ''}`.trim()
+})
+
+// Get tutor USER ID (not tutor profile ID)
+const tutorUserId = computed(() => {
+  // The tutor_id we need to send should be the user_id, not the tutor profile id
+  if (props.tutor.user_id) {
+    return props.tutor.user_id  // This is the user ID from tutors table
+  }
+  if (props.tutor.user && props.tutor.user.id) {
+    return props.tutor.user.id  // This is the user object ID
+  }
+  return props.tutor.id  // Fallback to profile ID (might not work)
 })
 
 // Message templates for first-time conversations
@@ -147,20 +161,20 @@ const messageTemplates = ref([
 ])
 
 // Methods
-const openModal = async () => {
-  if (existingConversation.value) {
-    // Navigate directly to existing conversation
-    router.push(`/messages/${existingConversation.value.id}`)
-    return
-  }
+const openModal = () => {
+  console.log('Opening modal, current user:', currentUser.value)
+  console.log('Tutor object:', props.tutor)
+  console.log('Tutor USER ID we will send:', tutorUserId.value)
 
-  // Check if user is authenticated and is a student
+  // Check if user is authenticated
   if (!currentUser.value) {
+    alert('Trebuie să te conectezi pentru a trimite mesaje.')
     router.push('/login')
     return
   }
 
-  if (!currentUser.value.isStudent()) {
+  // Check if user is a student
+  if (currentUser.value.user_type !== 'student') {
     alert('Doar studenții pot trimite mesaje către tutori.')
     return
   }
@@ -181,9 +195,11 @@ const selectTemplate = (template) => {
 const sendMessage = async () => {
   if (!message.value.trim() || sending.value) return
 
+  console.log('Sending message to tutor USER ID:', tutorUserId.value)
+
   try {
     const conversation = await messageStore.startConversation(
-      props.tutor.id,
+      tutorUserId.value,
       message.value.trim()
     )
 
@@ -193,19 +209,18 @@ const sendMessage = async () => {
     router.push(`/messages/${conversation.id}`)
   } catch (error) {
     // Error is handled by the store
+    console.error('Error starting conversation:', error)
   }
 }
 
-const getInitials = (user) => {
-  if (!user) return '?'
-  return `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase()
+const getInitials = (name) => {
+  if (!name) return '?'
+  const names = name.split(' ')
+  return names.map(n => n[0]).join('').toUpperCase()
 }
 
-// Lifecycle
-onMounted(() => {
-  // Load user's conversations to check for existing ones
-  if (currentUser.value?.isStudent()) {
-    messageStore.loadConversations()
-  }
-})
+const getTutorBio = () => {
+  const bio = props.tutor.bio || props.tutor.description || 'Tutor profesionist'
+  return bio.length > 60 ? bio.slice(0, 60) + '...' : bio
+}
 </script>
