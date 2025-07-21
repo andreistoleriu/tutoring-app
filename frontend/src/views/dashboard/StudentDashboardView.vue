@@ -1,3 +1,5 @@
+<!-- Replace frontend/src/views/dashboard/StudentDashboardView.vue with this enhanced version -->
+
 <template>
   <div class="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -21,6 +23,21 @@
               </svg>
               <span>{{ subscriptionButtonText }}</span>
             </button>
+
+            <!-- View All Bookings Button -->
+            <router-link to="/student/bookings"
+              class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium flex items-center space-x-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                </path>
+              </svg>
+              <span>Toate rezervările</span>
+              <span v-if="dashboardData?.stats?.total_bookings"
+                class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                {{ dashboardData.stats.total_bookings }}
+              </span>
+            </router-link>
 
             <router-link to="/tutors"
               class="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
@@ -78,20 +95,15 @@
               <p class="text-gray-600 text-sm">Gestionează-ți lecțiile și rezervările</p>
             </div>
             <div class="flex items-center space-x-3">
-              <!-- View All Bookings Button -->
-              <router-link to="/student/bookings"
-                class="bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium flex items-center space-x-2">
+              <button @click="loadDashboardData"
+                class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
                   </path>
                 </svg>
-                <span>Toate rezervările</span>
-                <span v-if="dashboardData?.stats?.total_bookings"
-                  class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                  {{ dashboardData.stats.total_bookings }}
-                </span>
-              </router-link>
+                <span>Actualizează</span>
+              </button>
             </div>
           </div>
         </div>
@@ -389,8 +401,8 @@
                   v-for="lesson in recentBookings.slice(0, 5)"
                   :key="lesson.id"
                   class="group bg-white border border-gray-200 rounded-xl p-3 sm:p-4 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer"
-                  @click="handleViewLessonDetails(lesson)"
-                >
+                  @click="handleViewLessonDetails(lesson)">
+
                   <div class="flex items-start space-x-3">
                     <!-- Tutor Avatar with Status -->
                     <div class="relative flex-shrink-0">
@@ -873,7 +885,7 @@ const currentTip = computed(() => {
   return tips[tipIndex]
 })
 
-// Helper functions (keeping all your existing helper functions)
+// Helper functions
 const formatNumber = (num) => {
   return new Intl.NumberFormat('ro-RO').format(num || 0)
 }
@@ -971,6 +983,19 @@ const formatTime = (dateString) => {
   }
 }
 
+const formatRelativeDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
+
+  if (diffInDays === 0) return 'Azi'
+  if (diffInDays === 1) return 'Ieri'
+  if (diffInDays < 7) return `${diffInDays} zile în urmă`
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} săptămâni în urmă`
+  return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })
+}
+
 const getStatusLabel = (status) => {
   const labels = {
     pending: 'În așteptare',
@@ -1013,19 +1038,6 @@ const getStatusIcon = (status) => {
   return icons[status] || '?'
 }
 
-const formatRelativeDate = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
-
-  if (diffInDays === 0) return 'Azi'
-  if (diffInDays === 1) return 'Ieri'
-  if (diffInDays < 7) return `${diffInDays} zile în urmă`
-  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} săptămâni în urmă`
-  return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' })
-}
-
 const handleImageError = (event) => {
   event.target.style.display = 'none'
   event.target.parentElement.classList.add('border-2', 'border-gray-300')
@@ -1060,11 +1072,11 @@ const loadUpcomingReminders = async () => {
     if (error.response?.status === 401) {
       console.log('🔒 User not authenticated - need to login')
       upcomingReminders.value = []
-    } else if (error.response?.status === 500) {
-      console.error('💥 Server error:', error.response?.data)
+    } else if (error.response?.status === 404) {
+      console.log('📭 No reminders endpoint available')
       upcomingReminders.value = []
     } else {
-      console.error('💥 Unexpected error:', error.response?.data)
+      console.error('💥 Server error:', error.response?.data)
       upcomingReminders.value = []
     }
 
@@ -1196,13 +1208,14 @@ const loadDashboardData = async () => {
   try {
     console.log('🔄 Loading dashboard data...')
 
+    let response
     if (studentStore.getDashboard) {
-      const response = await studentStore.getDashboard()
+      response = await studentStore.getDashboard()
       dashboardData.value = response
       upcomingBookings.value = response.upcoming_bookings || []
       recentBookings.value = response.recent_bookings || []
     } else {
-      const response = await api.get('student/dashboard')
+      response = await api.get('/student/dashboard')
       dashboardData.value = response.data
       upcomingBookings.value = response.data.upcoming_bookings || []
       recentBookings.value = response.data.recent_bookings || []
