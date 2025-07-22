@@ -337,7 +337,7 @@ export default {
 
     const loadLocations = async () => {
       try {
-        const response = await api.get('/locations')
+        const response = await api.get('locations')
         locations.value = response.data.locations
       } catch (error) {
         console.error('Error loading locations:', error)
@@ -383,9 +383,9 @@ export default {
 
         // Redirect based on user type
         if (authStore.isTutor) {
-          router.push('/dashboard/tutor')
+          router.push('dashboard/tutor')
         } else {
-          router.push('/dashboard/student')
+          router.push('dashboard/student')
         }
       } catch (error) {
         if (error.response?.data?.errors) {

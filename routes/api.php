@@ -61,14 +61,23 @@ Route::prefix('v1')->group(function () {
         ]);
     });
 
+    // ENHANCED: Fixed locations endpoint to support both formats
     Route::get('locations', function () {
         $locations = \App\Models\Location::active()
             ->select('id', 'city', 'county', 'slug')
+            ->orderBy('county')
             ->orderBy('city')
             ->get();
 
+        // Group by county for registration dropdown (RegisterModal expects this format)
+        $grouped = $locations->groupBy('county')->map(function ($countyLocations) {
+            return $countyLocations->values(); // Remove keys and return indexed array
+        });
+
         return response()->json([
-            'locations' => $locations
+            'locations' => $grouped, // Grouped format for dropdowns (used by RegisterModal)
+            'all_locations' => $locations, // Flat list for easier filtering (used by other components)
+            'count' => $locations->count()
         ]);
     });
 
